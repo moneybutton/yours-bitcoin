@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><title>pubkey</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="pubkey"><meta name="groc-project-path" content="lib/pubkey.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/pubkey.js">lib/pubkey.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+<span class="hljs-keyword">var</span> bn = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> privkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./privkey'</span>);
+
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Pubkey</span><span class="hljs-params">(point)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Pubkey))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Pubkey(point);
+  <span class="hljs-keyword">if</span> (point <span class="hljs-keyword">instanceof</span> Point)
+    <span class="hljs-keyword">this</span>.point = point;
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (point) {
+    <span class="hljs-keyword">var</span> obj = point;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Pubkey.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (obj.point &amp;&amp; !obj.point.getX() &amp;&amp; !obj.point.getY())
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid point'</span>);
+  <span class="hljs-keyword">this</span>.point = obj.point || <span class="hljs-keyword">this</span>.point;
+  <span class="hljs-keyword">this</span>.compressed = <span class="hljs-keyword">typeof</span> obj.compressed !== <span class="hljs-string">'undefined'</span> ? obj.compressed : <span class="hljs-keyword">this</span>.compressed;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Pubkey.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.fromBuffer(<span class="hljs-keyword">new</span> Buffer(json, <span class="hljs-string">'hex'</span>));
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Pubkey.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBuffer().toString(<span class="hljs-string">'hex'</span>);
+};
+
+Pubkey.prototype.fromPrivkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(privkey)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    point: Point.getG().mul(privkey.bn),
+    compressed: privkey.compressed}
+  );
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Pubkey.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromDER(buf);
+};
+
+Pubkey.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x04</span>) {
+    <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>, <span class="hljs-number">33</span>);
+    <span class="hljs-keyword">var</span> ybuf = buf.slice(<span class="hljs-number">33</span>, <span class="hljs-number">65</span>);
+    <span class="hljs-keyword">if</span> (xbuf.length !== <span class="hljs-number">32</span> || ybuf.length !== <span class="hljs-number">32</span> || buf.length !== <span class="hljs-number">65</span>)
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length of x and y must be 32 bytes'</span>);
+    <span class="hljs-keyword">var</span> x = bn(xbuf);
+    <span class="hljs-keyword">var</span> y = bn(ybuf);
+    <span class="hljs-keyword">this</span>.point = Point(x, y);
+    <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">false</span>;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x03</span>) {
+    <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>);
+    <span class="hljs-keyword">var</span> x = bn(xbuf);
+    <span class="hljs-keyword">this</span>.fromX(<span class="hljs-literal">true</span>, x);
+    <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x02</span>) {
+    <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>);
+    <span class="hljs-keyword">var</span> x = bn(xbuf);
+    <span class="hljs-keyword">this</span>.fromX(<span class="hljs-literal">false</span>, x);
+    <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid DER format pubkey'</span>);
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Pubkey.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">this</span>.fromDER(<span class="hljs-keyword">new</span> Buffer(str, <span class="hljs-string">'hex'</span>));
+};
+
+Pubkey.prototype.fromX = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(odd, x)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> odd !== <span class="hljs-string">'boolean'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify whether y is odd or not (true or false)'</span>);
+  <span class="hljs-keyword">this</span>.point = Point.fromX(odd, x);
+};
+
+Pubkey.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> compressed = <span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed === <span class="hljs-string">'undefined'</span> ? <span class="hljs-literal">true</span> : <span class="hljs-keyword">this</span>.compressed;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toDER(compressed);
+};
+
+Pubkey.prototype.toDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(compressed)</span> {</span>
+  compressed = <span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed === <span class="hljs-string">'undefined'</span> ? compressed : <span class="hljs-keyword">this</span>.compressed;
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> compressed !== <span class="hljs-string">'boolean'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify whether the public key is compressed or not (true or false)'</span>);
+
+  <span class="hljs-keyword">var</span> x = <span class="hljs-keyword">this</span>.point.getX();
+  <span class="hljs-keyword">var</span> y = <span class="hljs-keyword">this</span>.point.getY();
+
+  <span class="hljs-keyword">var</span> xbuf = x.toBuffer({size: <span class="hljs-number">32</span>});
+  <span class="hljs-keyword">var</span> ybuf = y.toBuffer({size: <span class="hljs-number">32</span>});
+
+  <span class="hljs-keyword">if</span> (!compressed) {
+    <span class="hljs-keyword">var</span> prefix = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x04</span>]);
+    <span class="hljs-keyword">return</span> Buffer.concat([prefix, xbuf, ybuf]);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">var</span> odd = ybuf[ybuf.length - <span class="hljs-number">1</span>] % <span class="hljs-number">2</span>;
+    <span class="hljs-keyword">if</span> (odd)
+      <span class="hljs-keyword">var</span> prefix = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x03</span>]);
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">var</span> prefix = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x02</span>]);
+    <span class="hljs-keyword">return</span> Buffer.concat([prefix, xbuf]);
+  }
+};
+
+Pubkey.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> compressed = <span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed === <span class="hljs-string">'undefined'</span> ? <span class="hljs-literal">true</span> : <span class="hljs-keyword">this</span>.compressed;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toDER(compressed).toString(<span class="hljs-string">'hex'</span>);
+};
+
+<span class="hljs-comment">//https://www.iacr.org/archive/pkc2003/25670211/25670211.pdf</span>
+Pubkey.prototype.validate = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.point.isInfinity())
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'point: Point cannot be equal to Infinity'</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.point.eq(Point(bn(<span class="hljs-number">0</span>), bn(<span class="hljs-number">0</span>))))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'point: Point cannot be equal to 0, 0'</span>);
+  <span class="hljs-keyword">this</span>.point.validate();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+module.exports = Pubkey;</div></div></div></div></body></html>

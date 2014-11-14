@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><title>txout</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="txout"><meta name="groc-project-path" content="lib/txout.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/txout.js">lib/txout.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Varint = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./varint'</span>);
+<span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
+
+<span class="hljs-keyword">var</span> Txout = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Txout</span><span class="hljs-params">(valuebn, scriptvi, script)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Txout))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txout(valuebn, scriptvi, script);
+  <span class="hljs-keyword">if</span> (valuebn <span class="hljs-keyword">instanceof</span> BN) {
+    <span class="hljs-keyword">this</span>.set({
+      valuebn: valuebn,
+      scriptvi: scriptvi,
+      script: script
+    });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (valuebn) {
+    <span class="hljs-keyword">var</span> obj = valuebn;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Txout.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.valuebn = obj.valuebn || <span class="hljs-keyword">this</span>.valuebn;
+  <span class="hljs-keyword">this</span>.scriptvi = obj.scriptvi || <span class="hljs-keyword">this</span>.scriptvi;
+  <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txout.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    valuebn: BN().fromJSON(json.valuebn),
+    scriptvi: Varint().fromJSON(json.scriptvi),
+    script: Script().fromJSON(json.script)
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txout.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> {
+    valuebn: <span class="hljs-keyword">this</span>.valuebn.toJSON(),
+    scriptvi: <span class="hljs-keyword">this</span>.scriptvi.toJSON(),
+    script: <span class="hljs-keyword">this</span>.script.toJSON()
+  };
+};
+
+Txout.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+};
+
+Txout.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+  <span class="hljs-keyword">this</span>.valuebn = br.readUInt64LEBN();
+  <span class="hljs-keyword">this</span>.scriptvi = Varint(br.readVarintNum());
+  <span class="hljs-keyword">this</span>.script = Script().fromBuffer(br.read(<span class="hljs-keyword">this</span>.scriptvi.toNumber()));
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txout.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter(bw).concat();
+};
+
+Txout.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+  <span class="hljs-keyword">if</span> (!bw)
+    bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.writeUInt64LEBN(<span class="hljs-keyword">this</span>.valuebn);
+  bw.write(<span class="hljs-keyword">this</span>.scriptvi.buf);
+  bw.write(<span class="hljs-keyword">this</span>.script.toBuffer());
+  <span class="hljs-keyword">return</span> bw;
+};
+
+module.exports = Txout;</div></div></div></div></body></html>

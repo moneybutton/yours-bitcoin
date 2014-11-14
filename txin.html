@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en"><head><title>txin</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="txin"><meta name="groc-project-path" content="lib/txin.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/txin.js">lib/txin.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Varint = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./varint'</span>);
+<span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
+
+<span class="hljs-keyword">var</span> Txin = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Txin</span><span class="hljs-params">(txidbuf, txoutnum, scriptvi, script, seqnum)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Txin))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txin(txidbuf, txoutnum, scriptvi, script, seqnum);
+  <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf)) {
+    <span class="hljs-keyword">if</span> (txidbuf.length !== <span class="hljs-number">32</span>)
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'txidbuf must be 32 bytes'</span>);
+    <span class="hljs-keyword">this</span>.txidbuf = txidbuf;
+    <span class="hljs-keyword">this</span>.txoutnum = txoutnum;
+    <span class="hljs-keyword">this</span>.scriptvi = scriptvi;
+    <span class="hljs-keyword">this</span>.script = script;
+    <span class="hljs-keyword">this</span>.seqnum = seqnum;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (txidbuf) {
+    <span class="hljs-keyword">var</span> obj = txidbuf;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Txin.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.txidbuf = obj.txidbuf || <span class="hljs-keyword">this</span>.txidbuf;
+  <span class="hljs-keyword">this</span>.txoutnum = <span class="hljs-keyword">typeof</span> obj.txoutnum !== <span class="hljs-string">'undefined'</span> ? obj.txoutnum : <span class="hljs-keyword">this</span>.txoutnum;
+  <span class="hljs-keyword">this</span>.scriptvi = <span class="hljs-keyword">typeof</span> obj.scriptvi !== <span class="hljs-string">'undefined'</span> ? obj.scriptvi : <span class="hljs-keyword">this</span>.scriptvi;
+  <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
+  <span class="hljs-keyword">this</span>.seqnum = <span class="hljs-keyword">typeof</span> obj.seqnum !== <span class="hljs-string">'undefined'</span> ? obj.seqnum : <span class="hljs-keyword">this</span>.seqnum;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txin.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    txidbuf: <span class="hljs-keyword">new</span> Buffer(json.txidbuf, <span class="hljs-string">'hex'</span>),
+    txoutnum: json.txoutnum,
+    scriptvi: Varint().fromJSON(json.scriptvi),
+    script: Script().fromJSON(json.script),
+    seqnum: json.seqnum
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txin.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> {
+    txidbuf: <span class="hljs-keyword">this</span>.txidbuf.toString(<span class="hljs-string">'hex'</span>),
+    txoutnum: <span class="hljs-keyword">this</span>.txoutnum,
+    scriptvi: <span class="hljs-keyword">this</span>.scriptvi.toJSON(),
+    script: <span class="hljs-keyword">this</span>.script.toJSON(),
+    seqnum: <span class="hljs-keyword">this</span>.seqnum
+  };
+};
+
+Txin.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+};
+
+Txin.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+  <span class="hljs-keyword">this</span>.txidbuf = br.read(<span class="hljs-number">32</span>);
+  <span class="hljs-keyword">this</span>.txoutnum = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.scriptvi = Varint(br.readVarintBuf());
+  <span class="hljs-keyword">this</span>.script = Script().fromBuffer(br.read(<span class="hljs-keyword">this</span>.scriptvi.toNumber()));
+  <span class="hljs-keyword">this</span>.seqnum = br.readUInt32LE();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txin.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter().concat();
+};
+
+Txin.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+  <span class="hljs-keyword">if</span> (!bw)
+    bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.write(<span class="hljs-keyword">this</span>.txidbuf);
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.txoutnum);
+  bw.write(<span class="hljs-keyword">this</span>.scriptvi.buf);
+  bw.write(<span class="hljs-keyword">this</span>.script.toBuffer());
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.seqnum);
+  <span class="hljs-keyword">return</span> bw;
+};
+
+module.exports = Txin;</div></div></div></div></body></html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html><html lang="en"><head><title>script</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="script"><meta name="groc-project-path" content="lib/script.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/script.js">lib/script.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Opcode = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./opcode'</span>);
+
+<span class="hljs-keyword">var</span> Script = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Script</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Script))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Script(buf);
+  
+  <span class="hljs-keyword">this</span>.chunks = [];
+
+  <span class="hljs-keyword">if</span> (Buffer.isBuffer(buf)) {
+    <span class="hljs-keyword">this</span>.fromBuffer(buf);
+  }
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> buf === <span class="hljs-string">'string'</span>) {
+    <span class="hljs-keyword">var</span> str = buf;
+    <span class="hljs-keyword">this</span>.fromString(str);
+  }
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> buf !== <span class="hljs-string">'undefined'</span>) {
+    <span class="hljs-keyword">var</span> obj = buf;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Script.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.chunks = obj.chunks || <span class="hljs-keyword">this</span>.chunks;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Script.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromString(json);
+};
+
+Script.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toString();
+};
+
+Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">this</span>.chunks = [];
+
+  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufferReader(buf);
+  <span class="hljs-keyword">while</span> (!br.eof()) {
+    <span class="hljs-keyword">var</span> opcodenum = br.readUInt8();
+
+    <span class="hljs-keyword">var</span> len, buf;
+    <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+      len = opcodenum;
+      <span class="hljs-keyword">this</span>.chunks.push({
+        buf: br.read(len),
+        len: len,
+        opcodenum: opcodenum
+      });
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1) {
+      len = br.readUInt8();
+      <span class="hljs-keyword">var</span> buf = br.read(len);
+      <span class="hljs-keyword">this</span>.chunks.push({
+        buf: buf,
+        len: len,
+        opcodenum: opcodenum
+      });
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA2) {
+      len = br.readUInt16LE();
+      buf = br.read(len);
+      <span class="hljs-keyword">this</span>.chunks.push({
+        buf: buf,
+        len: len,
+        opcodenum: opcodenum
+      });
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA4) {
+      len = br.readUInt32LE();
+      buf = br.read(len);
+      <span class="hljs-keyword">this</span>.chunks.push({
+        buf: buf,
+        len: len,
+        opcodenum: opcodenum
+      });
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">this</span>.chunks.push(opcodenum);
+    }
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Script.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
+    <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> chunk === <span class="hljs-string">'number'</span>) {
+      <span class="hljs-keyword">var</span> opcodenum = chunk;
+      bw.writeUInt8(opcodenum);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
+      bw.writeUInt8(chunk.opcodenum);
+      <span class="hljs-keyword">if</span> (opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+        bw.write(chunk.buf);
+      }
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1) {
+        bw.writeUInt8(chunk.len);
+        bw.write(chunk.buf);
+      }
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA2) {
+        bw.writeUInt16LE(chunk.len);
+        bw.write(chunk.buf);
+      }
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA4) {
+        bw.writeUInt32LE(chunk.len);
+        bw.write(chunk.buf);
+      }
+    }
+  }
+
+  <span class="hljs-keyword">return</span> bw.concat();
+};
+
+Script.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">this</span>.chunks = [];
+
+  <span class="hljs-keyword">var</span> tokens = str.split(<span class="hljs-string">' '</span>);
+  <span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">while</span> (i &lt; tokens.length) {
+    <span class="hljs-keyword">var</span> token = tokens[i];
+    <span class="hljs-keyword">var</span> opcode = Opcode(token);
+    <span class="hljs-keyword">var</span> opcodenum = opcode.toNumber();
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opcodenum === <span class="hljs-string">'undefined'</span>) {
+      opcodenum = <span class="hljs-built_in">parseInt</span>(token);
+      <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+        <span class="hljs-keyword">this</span>.chunks.push({
+          buf: <span class="hljs-keyword">new</span> Buffer(tokens[i + <span class="hljs-number">1</span>].slice(<span class="hljs-number">2</span>), <span class="hljs-string">'hex'</span>),
+          len: opcodenum,
+          opcodenum: opcodenum
+        });
+        i = i + <span class="hljs-number">2</span>;
+      }
+      <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid script'</span>);
+      }
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1 || opcodenum === Opcode.map.OP_PUSHDATA2 || opcodenum === Opcode.map.OP_PUSHDATA4) {
+      <span class="hljs-keyword">if</span> (tokens[i + <span class="hljs-number">2</span>].slice(<span class="hljs-number">0</span>, <span class="hljs-number">2</span>) != <span class="hljs-string">'0x'</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Pushdata data must start with 0x'</span>);
+      <span class="hljs-keyword">this</span>.chunks.push({
+        buf: <span class="hljs-keyword">new</span> Buffer(tokens[i + <span class="hljs-number">2</span>].slice(<span class="hljs-number">2</span>), <span class="hljs-string">'hex'</span>),
+        len: <span class="hljs-built_in">parseInt</span>(tokens[i + <span class="hljs-number">1</span>]),
+        opcodenum: opcodenum
+      });
+      i = i + <span class="hljs-number">3</span>;
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">this</span>.chunks.push(opcodenum);
+      i = i + <span class="hljs-number">1</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Script.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> str = <span class="hljs-string">""</span>;
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
+    <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> chunk === <span class="hljs-string">'number'</span>) {
+      <span class="hljs-keyword">var</span> opcodenum = chunk;
+      str = str + Opcode(opcodenum).toString() + <span class="hljs-string">" "</span>;
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1 || opcodenum === Opcode.map.OP_PUSHDATA2 || opcodenum === Opcode.map.OP_PUSHDATA4)
+        str = str + Opcode(opcodenum).toString() + <span class="hljs-string">" "</span> ;
+      str = str + chunk.len + <span class="hljs-string">" "</span> ;
+      str = str + <span class="hljs-string">"0x"</span> + chunk.buf.toString(<span class="hljs-string">'hex'</span>) + <span class="hljs-string">" "</span>;
+    }
+  }
+
+  <span class="hljs-keyword">return</span> str.substr(<span class="hljs-number">0</span>, str.length - <span class="hljs-number">1</span>);
+};
+
+Script.prototype.isOpReturn = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>] === Opcode(<span class="hljs-string">'OP_RETURN'</span>).toNumber()
+    &amp;&amp;
+    (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">1</span>
+    ||
+    (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">2</span>
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf.length &lt;= <span class="hljs-number">40</span>
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].length === <span class="hljs-keyword">this</span>.chunks.len))) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+};
+
+Script.prototype.isPubkeyhashOut = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>] === Opcode(<span class="hljs-string">'OP_DUP'</span>).toNumber()
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>] === Opcode(<span class="hljs-string">'OP_HASH160'</span>).toNumber()
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">2</span>].buf
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">3</span>] === Opcode(<span class="hljs-string">'OP_EQUALVERIFY'</span>).toNumber()
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">4</span>] === Opcode(<span class="hljs-string">'OP_CHECKSIG'</span>).toNumber()) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+};
+
+Script.prototype.isPubkeyhashIn = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">2</span>
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].buf
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+};
+
+Script.prototype.isScripthashOut = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">3</span>
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>] === Opcode(<span class="hljs-string">'OP_HASH160'</span>).toNumber()
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf.length === <span class="hljs-number">20</span>
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">2</span>] === Opcode(<span class="hljs-string">'OP_EQUAL'</span>).toNumber()) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+};
+
+<span class="hljs-comment">//note that these are frequently indistinguishable from pubkeyhashin</span>
+Script.prototype.isScripthashIn = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> allpush = <span class="hljs-keyword">this</span>.chunks.every(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(chunk)</span> {</span>
+    <span class="hljs-keyword">return</span> Buffer.isBuffer(chunk.buf);
+  });
+  <span class="hljs-keyword">if</span> (allpush) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+};
+
+Script.prototype.write = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> obj === <span class="hljs-string">'string'</span>)
+    <span class="hljs-keyword">this</span>.writeOp(obj);
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> obj === <span class="hljs-string">'number'</span>)
+    <span class="hljs-keyword">this</span>.writeOp(obj);
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(obj))
+    <span class="hljs-keyword">this</span>.writeBuffer(obj);
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> obj === <span class="hljs-string">'object'</span>)
+    <span class="hljs-keyword">this</span>.chunks.push(obj);
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid script chunk'</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Script.prototype.writeOp = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> str === <span class="hljs-string">'number'</span>)
+    <span class="hljs-keyword">this</span>.chunks.push(str);
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">this</span>.chunks.push(Opcode(str).toNumber());
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Script.prototype.writeBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> opcodenum;
+  <span class="hljs-keyword">var</span> len = buf.length;
+  <span class="hljs-keyword">if</span> (buf.length &gt; <span class="hljs-number">0</span> &amp;&amp; buf.length &lt; Opcode.map.OP_PUSHDATA1) {
+    opcodenum = buf.length;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">8</span>)) {
+    opcodenum = Opcode.map.OP_PUSHDATA1;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">16</span>)) {
+    opcodenum = Opcode.map.OP_PUSHDATA2;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">32</span>)) {
+    opcodenum = Opcode.map.OP_PUSHDATA4;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"You can't push that much data"</span>);
+  }
+  <span class="hljs-keyword">this</span>.chunks.push({
+    buf: buf,
+    len: len,
+    opcodenum: opcodenum
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+module.exports = Script;</div></div></div></div></body></html>

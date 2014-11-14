@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="en"><head><title>hash</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="hash"><meta name="groc-project-path" content="lib/hash.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/hash.js">lib/hash.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>);
+<span class="hljs-keyword">var</span> hashjs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'hash.js'</span>);
+
+<span class="hljs-keyword">var</span> Hash = module.exports;
+
+Hash.sha1 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'sha1 hash must be of a buffer'</span>);
+  <span class="hljs-keyword">var</span> hashbuf = crypto.createHash(<span class="hljs-string">'sha1'</span>).update(buf).digest();
+  <span class="hljs-keyword">return</span> hashbuf;
+};
+
+Hash.sha1.blocksize = <span class="hljs-number">512</span>;
+
+Hash.sha256 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'sha256 hash must be of a buffer'</span>);
+  <span class="hljs-keyword">var</span> hashbuf = crypto.createHash(<span class="hljs-string">'sha256'</span>).update(buf).digest();
+  <span class="hljs-keyword">return</span> hashbuf;
+};
+
+Hash.sha256.blocksize = <span class="hljs-number">512</span>;
+
+Hash.sha256sha256 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> Hash.sha256(Hash.sha256(buf));
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'sha256sha256 hash must be of a buffer: '</span> + e);
+  }
+};
+
+Hash.ripemd160 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'ripemd160 hash must be of a buffer'</span>);
+  <span class="hljs-keyword">var</span> hash = (<span class="hljs-keyword">new</span> hashjs.ripemd160()).update(buf).digest();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Buffer(hash);
+};
+
+Hash.sha256ripemd160 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> Hash.ripemd160(Hash.sha256(buf));
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'sha256ripemd160 hash must be of a buffer: '</span> + e);
+  }
+};
+
+Hash.sha512 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'sha512 hash must be of a buffer'</span>);
+  <span class="hljs-keyword">var</span> hashbuf = crypto.createHash(<span class="hljs-string">'sha512'</span>).update(buf).digest();
+  <span class="hljs-keyword">return</span> hashbuf;
+};
+
+Hash.sha512.blocksize = <span class="hljs-number">1024</span>;
+
+Hash.hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashf, data, key)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(data) || !Buffer.isBuffer(key))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'data and key must be buffers'</span>);
+
+  <span class="hljs-comment">//http://en.wikipedia.org/wiki/Hash-based_message_authentication_code</span>
+  <span class="hljs-comment">//http://tools.ietf.org/html/rfc4868#section-2</span>
+  <span class="hljs-keyword">if</span> (!hashf.blocksize)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Blocksize for hash function unknown'</span>);
+
+  <span class="hljs-keyword">var</span> blocksize = hashf.blocksize / <span class="hljs-number">8</span>;
+  
+  <span class="hljs-keyword">if</span> (key.length &gt; blocksize)
+    key = hashf(key);
+
+  <span class="hljs-keyword">if</span> (key.length &lt; blocksize) {
+    <span class="hljs-keyword">var</span> fill = <span class="hljs-keyword">new</span> Buffer(blocksize);
+    fill.fill(<span class="hljs-number">0</span>, key.length);
+    key.copy(fill);
+    key = fill;
+  }
+
+  <span class="hljs-keyword">var</span> o_key_pad = <span class="hljs-keyword">new</span> Buffer(blocksize);
+  <span class="hljs-keyword">var</span> i_key_pad = <span class="hljs-keyword">new</span> Buffer(blocksize);
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; blocksize; i++) {
+    o_key_pad[i] = <span class="hljs-number">0x5c</span> ^ key[i];
+    i_key_pad[i] = <span class="hljs-number">0x36</span> ^ key[i];
+  }
+
+  <span class="hljs-keyword">return</span> hashf(Buffer.concat([o_key_pad, hashf(Buffer.concat([i_key_pad, data]))]));
+};
+
+Hash.sha1hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
+  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha1, data, key);
+};
+
+Hash.sha1hmac.bitsize = <span class="hljs-number">160</span>;
+
+Hash.sha256hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
+  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha256, data, key);
+};
+
+Hash.sha256hmac.bitsize = <span class="hljs-number">256</span>;
+
+Hash.sha512hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
+  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha512, data, key);
+};
+
+Hash.sha512hmac.bitsize = <span class="hljs-number">512</span>;</div></div></div></div></body></html>

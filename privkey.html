@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="en"><head><title>privkey</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="privkey"><meta name="groc-project-path" content="lib/privkey.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/privkey.js">lib/privkey.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+<span class="hljs-keyword">var</span> constants = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./constants'</span>);
+<span class="hljs-keyword">var</span> base58check = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./base58check'</span>);
+<span class="hljs-keyword">var</span> Random = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./random'</span>);
+
+<span class="hljs-keyword">var</span> Privkey = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Privkey</span><span class="hljs-params">(bn)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Privkey))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Privkey(bn);
+  <span class="hljs-keyword">if</span> (bn <span class="hljs-keyword">instanceof</span> BN)
+    <span class="hljs-keyword">this</span>.bn = bn;
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (bn) {
+    <span class="hljs-keyword">var</span> obj = bn;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Privkey.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.bn = obj.bn || <span class="hljs-keyword">this</span>.bn;
+  <span class="hljs-keyword">this</span>.networkstr = obj.networkstr || <span class="hljs-keyword">this</span>.networkstr;
+  <span class="hljs-keyword">this</span>.compressed = <span class="hljs-keyword">typeof</span> obj.compressed !== <span class="hljs-string">'undefined'</span> ? obj.compressed : <span class="hljs-keyword">this</span>.compressed;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Privkey.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.fromString(json);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Privkey.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toString();
+};
+
+Privkey.prototype.fromRandom = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">do</span> {
+    <span class="hljs-keyword">var</span> privbuf = Random.getRandomBuffer(<span class="hljs-number">32</span>);
+    <span class="hljs-keyword">var</span> bn = BN().fromBuffer(privbuf);
+    <span class="hljs-keyword">var</span> condition = bn.lt(Point.getN());
+  } <span class="hljs-keyword">while</span> (!condition);
+  <span class="hljs-keyword">this</span>.set({
+    bn: bn,
+    networkstr: <span class="hljs-string">'mainnet'</span>,
+    compressed: <span class="hljs-literal">true</span>
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Privkey.prototype.fromBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
+  <span class="hljs-keyword">this</span>.bn = bn;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Privkey.prototype.validate = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.bn.lt(Point.getN()))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Number must be less than N'</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> constants[<span class="hljs-keyword">this</span>.networkstr] === <span class="hljs-literal">undefined</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify the networkstr ("mainnet" or "testnet")'</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed !== <span class="hljs-string">'boolean'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify whether the corresponding public key is compressed or not (true or false)'</span>);
+};
+
+Privkey.prototype.toWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> networkstr = <span class="hljs-keyword">this</span>.networkstr;
+  <span class="hljs-keyword">var</span> compressed = <span class="hljs-keyword">this</span>.compressed;
+
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.networkstr === <span class="hljs-string">'undefined'</span>)
+    networkstr = <span class="hljs-string">'mainnet'</span>;
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed === <span class="hljs-string">'undefined'</span>)
+    compressed = <span class="hljs-literal">true</span>;
+
+  <span class="hljs-keyword">var</span> privbuf = <span class="hljs-keyword">this</span>.bn.toBuffer({size: <span class="hljs-number">32</span>});
+  <span class="hljs-keyword">var</span> buf;
+  <span class="hljs-keyword">if</span> (compressed)
+    buf = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([constants[networkstr].privkey]), <span class="hljs-keyword">this</span>.bn.toBuffer({size: <span class="hljs-number">32</span>}), <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x01</span>])]);
+  <span class="hljs-keyword">else</span>
+    buf = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([constants[networkstr].privkey]), <span class="hljs-keyword">this</span>.bn.toBuffer({size: <span class="hljs-number">32</span>})]);
+
+  <span class="hljs-keyword">return</span> base58check.encode(buf);
+};
+
+Privkey.prototype.fromWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = base58check.decode(str);
+
+  <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">1</span> + <span class="hljs-number">32</span> + <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">1</span> + <span class="hljs-number">32</span> + <span class="hljs-number">1</span> - <span class="hljs-number">1</span>] == <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">1</span> + <span class="hljs-number">32</span>)
+    <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length of privkey buffer must be 33 (uncompressed pubkey) or 34 (compressed pubkey)'</span>);
+
+  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === constants.mainnet.privkey)
+    <span class="hljs-keyword">this</span>.networkstr = <span class="hljs-string">'mainnet'</span>;
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === constants.testnet.privkey)
+    <span class="hljs-keyword">this</span>.networkstr = <span class="hljs-string">'testnet'</span>;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid networkstr'</span>);
+
+  <span class="hljs-keyword">this</span>.bn = BN.fromBuffer(buf.slice(<span class="hljs-number">1</span>, <span class="hljs-number">32</span> + <span class="hljs-number">1</span>));
+};
+
+Privkey.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toWIF();
+};
+
+Privkey.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">this</span>.fromWIF(str);
+};
+
+module.exports = Privkey;</div></div></div></div></body></html>

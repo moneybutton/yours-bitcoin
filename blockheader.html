@@ -1,0 +1,88 @@
+<!DOCTYPE html><html lang="en"><head><title>blockheader</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="blockheader"><meta name="groc-project-path" content="lib/blockheader.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/blockheader.js">lib/blockheader.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+
+<span class="hljs-keyword">var</span> Blockheader = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Blockheader</span><span class="hljs-params">(version, prevblockidbuf, merklerootbuf, time, bits, nonce)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Blockheader))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Blockheader(version, prevblockidbuf, merklerootbuf, time, bits, nonce);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> version === <span class="hljs-string">'number'</span>) {
+    <span class="hljs-keyword">this</span>.set({
+      version: version,
+      prevblockidbuf: prevblockidbuf,
+      merklerootbuf: merklerootbuf,
+      time: time,
+      bits: bits,
+      nonce: nonce
+    });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(version)) {
+    <span class="hljs-keyword">var</span> bhbuf = version;
+    <span class="hljs-keyword">this</span>.fromBuffer(bhbuf);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (version) {
+    <span class="hljs-keyword">var</span> obj = version;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+}
+
+Blockheader.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.version = <span class="hljs-keyword">typeof</span> obj.version !== <span class="hljs-string">'undefined'</span> ? obj.version : <span class="hljs-keyword">this</span>.version;
+  <span class="hljs-keyword">this</span>.prevblockidbuf = obj.prevblockidbuf || <span class="hljs-keyword">this</span>.prevblockidbuf;
+  <span class="hljs-keyword">this</span>.merklerootbuf = obj.merklerootbuf || <span class="hljs-keyword">this</span>.merklerootbuf;
+  <span class="hljs-keyword">this</span>.time = <span class="hljs-keyword">typeof</span> obj.time !== <span class="hljs-string">'undefined'</span> ? obj.time : <span class="hljs-keyword">this</span>.time;
+  <span class="hljs-keyword">this</span>.bits = <span class="hljs-keyword">typeof</span> obj.bits !== <span class="hljs-string">'undefined'</span> ? obj.bits : <span class="hljs-keyword">this</span>.bits;
+  <span class="hljs-keyword">this</span>.nonce = <span class="hljs-keyword">typeof</span> obj.nonce !== <span class="hljs-string">'undefined'</span> ? obj.nonce : <span class="hljs-keyword">this</span>.nonce;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Blockheader.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    version: json.version,
+    prevblockidbuf: <span class="hljs-keyword">new</span> Buffer(json.prevblockidbuf, <span class="hljs-string">'hex'</span>),
+    merklerootbuf: <span class="hljs-keyword">new</span> Buffer(json.merklerootbuf, <span class="hljs-string">'hex'</span>),
+    time: json.time,
+    bits: json.bits,
+    nonce: json.nonce
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Blockheader.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> {
+    version: <span class="hljs-keyword">this</span>.version,
+    prevblockidbuf: <span class="hljs-keyword">this</span>.prevblockidbuf.toString(<span class="hljs-string">'hex'</span>),
+    merklerootbuf: <span class="hljs-keyword">this</span>.merklerootbuf.toString(<span class="hljs-string">'hex'</span>),
+    time: <span class="hljs-keyword">this</span>.time,
+    bits: <span class="hljs-keyword">this</span>.bits,
+    nonce: <span class="hljs-keyword">this</span>.nonce
+  };
+};
+
+Blockheader.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+};
+
+Blockheader.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+  <span class="hljs-keyword">this</span>.version = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.prevblockidbuf = br.read(<span class="hljs-number">32</span>);
+  <span class="hljs-keyword">this</span>.merklerootbuf = br.read(<span class="hljs-number">32</span>);
+  <span class="hljs-keyword">this</span>.time = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.bits = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.nonce = br.readUInt32LE();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Blockheader.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter().concat();
+};
+
+Blockheader.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+  <span class="hljs-keyword">if</span> (!bw)
+    bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.version);
+  bw.write(<span class="hljs-keyword">this</span>.prevblockidbuf);
+  bw.write(<span class="hljs-keyword">this</span>.merklerootbuf);
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.time);
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.bits);
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.nonce);
+  <span class="hljs-keyword">return</span> bw;
+};
+
+module.exports = Blockheader;</div></div></div></div></body></html>

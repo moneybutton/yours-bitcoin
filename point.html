@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="en"><head><title>point</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="point"><meta name="groc-project-path" content="lib/point.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/point.js">lib/point.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> elliptic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'elliptic'</span>);
+<span class="hljs-keyword">var</span> ec = elliptic.curves.secp256k1;
+
+<span class="hljs-keyword">var</span> Point = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Point</span><span class="hljs-params">(x, y, isRed)</span> {</span>
+  <span class="hljs-keyword">return</span> ec.curve.point(x, y, isRed);
+};
+
+<span class="hljs-keyword">var</span> _point = ec.curve.point();
+<span class="hljs-keyword">var</span> _Point = _point.constructor;
+Point.prototype = _Point.prototype;
+
+Point.fromX = ec.curve.pointFromX.bind(ec.curve);
+
+Point.prototype.copy = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(point)</span> {</span>
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> <span class="hljs-keyword">this</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.hasOwnProperty(k)) {
+      point[k] = <span class="hljs-keyword">this</span>[k];
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Point.prototype.fromX = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(isOdd, x)</span> {</span>
+  <span class="hljs-keyword">var</span> point = Point.fromX(isOdd, x);
+  point.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>note that this overrides the elliptic point toJSON method</p></div></div><div class="code"><div class="wrapper">Point.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> {
+    isOdd: <span class="hljs-keyword">this</span>.x.isOdd(),
+    x: <span class="hljs-keyword">this</span>.x.toString()
+  };
+};
+
+Point.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">var</span> point = Point().fromX(json.isOdd, BN().fromString(json.x));
+  point.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Point.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.toJSON());
+};
+
+Point.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> json = <span class="hljs-built_in">JSON</span>.parse(str);
+  <span class="hljs-keyword">var</span> p = Point().fromJSON(json);
+  p.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Point.getG = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> p = Point(ec.curve.g.getX(), ec.curve.g.getY());
+  <span class="hljs-keyword">return</span> p;
+};
+
+Point.getN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> BN(ec.curve.n.toArray());
+};
+
+<span class="hljs-comment">//https://www.iacr.org/archive/pkc2003/25670211/25670211.pdf</span>
+Point.prototype.validate = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> p2 = Point.fromX(<span class="hljs-keyword">this</span>.getY().isOdd(), <span class="hljs-keyword">this</span>.getX());
+  <span class="hljs-keyword">if</span> (!(p2.y.cmp(<span class="hljs-keyword">this</span>.y) === <span class="hljs-number">0</span>))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid y value of public key'</span>);
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span>.getX().gt(-<span class="hljs-number">1</span>) &amp;&amp; <span class="hljs-keyword">this</span>.getX().lt(Point.getN()))
+    ||!(<span class="hljs-keyword">this</span>.getY().gt(-<span class="hljs-number">1</span>) &amp;&amp; <span class="hljs-keyword">this</span>.getY().lt(Point.getN())))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Point does not lie on the curve'</span>);
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span>.mul(Point.getN()).isInfinity()))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Point times N must be infinity'</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+module.exports = Point;</div></div></div></div></body></html>

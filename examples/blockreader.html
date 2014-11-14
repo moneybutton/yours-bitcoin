@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="en"><head><title>examples/blockreader</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content="../"><meta name="groc-document-path" content="examples/blockreader"><meta name="groc-project-path" content="examples/blockreader.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="../assets/style.css"><script type="text/javascript" src="../assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/examples/blockreader.js">examples/blockreader.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Block = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../lib/block'</span>);
+<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../lib/bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../lib/bufferwriter'</span>);
+
+<span class="hljs-comment">//This example will parse the blocks in a block file.</span>
+<span class="hljs-comment">//To use, pipe in a blk*****.dat file. e.g.:</span>
+<span class="hljs-comment">//cat blk00000.dat | node blockreader.js</span>
+
+<span class="hljs-keyword">var</span> head = <span class="hljs-literal">null</span>;
+
+process.stdin.on(<span class="hljs-string">'readable'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (!head) {
+    head = process.stdin.read(<span class="hljs-number">8</span>);
+    <span class="hljs-keyword">if</span> (!head)
+      <span class="hljs-keyword">return</span>;
+  }
+  <span class="hljs-keyword">var</span> body = process.stdin.read(head.slice(<span class="hljs-number">4</span>).readUInt32LE(<span class="hljs-number">0</span>));
+  <span class="hljs-keyword">if</span> (!body)
+    <span class="hljs-keyword">return</span>;
+  <span class="hljs-keyword">var</span> blockbuf = BufferWriter().write(head).write(body).concat();
+  <span class="hljs-keyword">var</span> block = Block().fromBuffer(blockbuf);
+  console.log(block.toJSON());
+  head = <span class="hljs-literal">null</span>;
+  process.stdin.unshift(process.stdin.read());
+});</div></div></div></div></body></html>

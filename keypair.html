@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><title>keypair</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="keypair"><meta name="groc-project-path" content="lib/keypair.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/keypair.js">lib/keypair.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Privkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./privkey'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
+<span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+
+<span class="hljs-keyword">var</span> Keypair = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Keypair</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Keypair))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Keypair(obj);
+  <span class="hljs-keyword">if</span> (obj)
+    <span class="hljs-keyword">this</span>.set(obj);
+};
+
+Keypair.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.privkey = obj.privkey || <span class="hljs-keyword">this</span>.privkey || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">this</span>.pubkey = obj.pubkey || <span class="hljs-keyword">this</span>.pubkey || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Keypair.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">if</span> (json.privkey)
+    <span class="hljs-keyword">this</span>.set({privkey: Privkey().fromJSON(json.privkey)});
+  <span class="hljs-keyword">if</span> (json.pubkey)
+    <span class="hljs-keyword">this</span>.set({pubkey: Pubkey().fromJSON(json.pubkey)});
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Keypair.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> json = {};
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.privkey)
+    json.privkey = <span class="hljs-keyword">this</span>.privkey.toJSON();
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.pubkey)
+    json.pubkey = <span class="hljs-keyword">this</span>.pubkey.toJSON();
+  <span class="hljs-keyword">return</span> json;
+};
+
+Keypair.prototype.fromPrivkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(privkey)</span> {</span>
+  <span class="hljs-keyword">this</span>.privkey = privkey;
+  <span class="hljs-keyword">this</span>.privkey2pubkey();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Keypair.prototype.fromRandom = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">this</span>.privkey = Privkey().fromRandom();
+  <span class="hljs-keyword">this</span>.privkey2pubkey();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Keypair.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> obj = <span class="hljs-built_in">JSON</span>.parse(str);
+  <span class="hljs-keyword">if</span> (obj.privkey) {
+    <span class="hljs-keyword">this</span>.privkey = <span class="hljs-keyword">new</span> Privkey();
+    <span class="hljs-keyword">this</span>.privkey.fromString(obj.privkey);
+  }
+  <span class="hljs-keyword">if</span> (obj.pubkey) {
+    <span class="hljs-keyword">this</span>.pubkey = <span class="hljs-keyword">new</span> Pubkey();
+    <span class="hljs-keyword">this</span>.pubkey.fromString(obj.pubkey);
+  }
+};
+
+Keypair.prototype.privkey2pubkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">this</span>.pubkey = Pubkey().fromPrivkey(<span class="hljs-keyword">this</span>.privkey);
+};
+
+Keypair.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> obj = {};
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.privkey)
+    obj.privkey = <span class="hljs-keyword">this</span>.privkey.toString();
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.pubkey)
+    obj.pubkey = <span class="hljs-keyword">this</span>.pubkey.toString();
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">JSON</span>.stringify(obj);
+};
+
+module.exports = Keypair;</div></div></div></div></body></html>

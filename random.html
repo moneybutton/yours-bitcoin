@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head><title>random</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="random"><meta name="groc-project-path" content="lib/random.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/random.js">lib/random.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Random</span><span class="hljs-params">()</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>secure random bytes that sometimes throws an error due to lack of entropy </p></div></div><div class="code"><div class="wrapper">Random.getRandomBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(size)</span> {</span>
+  <span class="hljs-keyword">if</span> (process.browser)
+    <span class="hljs-keyword">return</span> Random.getRandomBufferBrowser(size);
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">return</span> Random.getRandomBufferNode(size);
+};
+
+Random.getRandomBufferNode = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(size)</span> {</span>
+  <span class="hljs-keyword">var</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>);
+  <span class="hljs-keyword">return</span> crypto.randomBytes(size);
+}
+
+Random.getRandomBufferBrowser = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(size)</span> {</span>
+  <span class="hljs-keyword">if</span> (!window.crypto &amp;&amp; !window.msCrypto)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'window.crypto not available'</span>);
+
+  <span class="hljs-keyword">if</span> (window.crypto &amp;&amp; window.crypto.getRandomValues)
+    <span class="hljs-keyword">var</span> crypto = window.crypto;
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (window.msCrypto &amp;&amp; window.msCrypto.getRandomValues) <span class="hljs-comment">//internet explorer</span>
+    <span class="hljs-keyword">var</span> crypto = window.msCrypto;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'window.crypto.getRandomValues not available'</span>);
+
+  <span class="hljs-keyword">var</span> bbuf = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Uint8Array</span>(size);
+  crypto.getRandomValues(bbuf);
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(bbuf);
+
+  <span class="hljs-keyword">return</span> buf;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>insecure random bytes, but it never fails </p></div></div><div class="code"><div class="wrapper">Random.getPseudoRandomBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(size)</span> {</span>
+  <span class="hljs-keyword">var</span> b32 = <span class="hljs-number">0x100000000</span>;
+  <span class="hljs-keyword">var</span> b = <span class="hljs-keyword">new</span> Buffer(size);
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt;= size; i++) {
+    <span class="hljs-keyword">var</span> j = <span class="hljs-built_in">Math</span>.floor(i / <span class="hljs-number">4</span>);
+    <span class="hljs-keyword">var</span> k = i - j * <span class="hljs-number">4</span>;
+    <span class="hljs-keyword">if</span> (k == <span class="hljs-number">0</span>) {
+      r = <span class="hljs-built_in">Math</span>.random() * b32;
+      b[i] = r &amp; <span class="hljs-number">0xff</span>;
+    } <span class="hljs-keyword">else</span> {
+      b[i] = (r = r &gt;&gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>;
+    }
+  }
+
+  <span class="hljs-keyword">return</span> b;
+};
+
+module.exports = Random;</div></div></div></div></body></html>

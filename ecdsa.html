@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="en"><head><title>ecdsa</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="ecdsa"><meta name="groc-project-path" content="lib/ecdsa.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/ecdsa.js">lib/ecdsa.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+<span class="hljs-keyword">var</span> Signature = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./signature'</span>);
+<span class="hljs-keyword">var</span> Keypair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./keypair'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
+<span class="hljs-keyword">var</span> Random = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./random'</span>);
+<span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
+
+<span class="hljs-keyword">var</span> ECDSA = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">ECDSA</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> ECDSA))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> ECDSA(obj);
+  <span class="hljs-keyword">if</span> (obj)
+    <span class="hljs-keyword">this</span>.set(obj);
+};
+
+ECDSA.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.hashbuf = obj.hashbuf || <span class="hljs-keyword">this</span>.hashbuf;
+  <span class="hljs-keyword">this</span>.keypair = obj.keypair || <span class="hljs-keyword">this</span>.keypair;
+  <span class="hljs-keyword">this</span>.sig = obj.sig || <span class="hljs-keyword">this</span>.sig;
+  <span class="hljs-keyword">this</span>.k = obj.k || <span class="hljs-keyword">this</span>.k;
+  <span class="hljs-keyword">this</span>.verified = obj.verified || <span class="hljs-keyword">this</span>.verified;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+ECDSA.prototype.calci = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">4</span>; i++) {
+    <span class="hljs-keyword">this</span>.sig.i = i;
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">var</span> Qprime = <span class="hljs-keyword">this</span>.sig2pubkey();
+    } <span class="hljs-keyword">catch</span> (e) {
+      <span class="hljs-keyword">continue</span>;
+    }
+
+    <span class="hljs-keyword">if</span> (Qprime.point.eq(<span class="hljs-keyword">this</span>.keypair.pubkey.point)) {
+      <span class="hljs-keyword">this</span>.sig.compressed = <span class="hljs-keyword">this</span>.keypair.pubkey.compressed;
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+    }
+  }
+
+  <span class="hljs-keyword">this</span>.sig.i = <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Unable to find valid recovery factor'</span>);
+};
+
+ECDSA.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> obj = <span class="hljs-built_in">JSON</span>.parse(str);
+  <span class="hljs-keyword">if</span> (obj.hashbuf)
+    <span class="hljs-keyword">this</span>.hashbuf = <span class="hljs-keyword">new</span> Buffer(obj.hashbuf, <span class="hljs-string">'hex'</span>);
+  <span class="hljs-keyword">if</span> (obj.keypair)
+    <span class="hljs-keyword">this</span>.keypair = Keypair().fromString(obj.keypair);
+  <span class="hljs-keyword">if</span> (obj.sig)
+    <span class="hljs-keyword">this</span>.sig = Signature().fromString(obj.sig);
+  <span class="hljs-keyword">if</span> (obj.k)
+    <span class="hljs-keyword">this</span>.k = BN(obj.k, <span class="hljs-number">10</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+ECDSA.prototype.randomK = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> N = Point.getN();
+  <span class="hljs-keyword">var</span> k;
+  <span class="hljs-keyword">do</span> {
+    k = BN().fromBuffer(Random.getRandomBuffer(<span class="hljs-number">32</span>));
+  } <span class="hljs-keyword">while</span> (!(k.lt(N) &amp;&amp; k.gt(<span class="hljs-number">0</span>)));
+  <span class="hljs-keyword">this</span>.k = k;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p><a href="https://tools.ietf.org/html/rfc6979#section-3.2">https://tools.ietf.org/html/rfc6979#section-3.2</a></p></div></div><div class="code"><div class="wrapper">ECDSA.prototype.deterministicK = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(badrs)</span> {</span>
+  <span class="hljs-keyword">var</span> v = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">32</span>);
+  v.fill(<span class="hljs-number">0x01</span>);
+  <span class="hljs-keyword">var</span> k = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">32</span>);
+  k.fill(<span class="hljs-number">0x00</span>);
+  <span class="hljs-keyword">var</span> x = <span class="hljs-keyword">this</span>.keypair.privkey.bn.toBuffer({size: <span class="hljs-number">32</span>});
+  k = Hash.sha256hmac(Buffer.concat([v, <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x00</span>]), x, <span class="hljs-keyword">this</span>.hashbuf]), k);
+  v = Hash.sha256hmac(v, k);
+  k = Hash.sha256hmac(Buffer.concat([v, <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x01</span>]), x, <span class="hljs-keyword">this</span>.hashbuf]), k);
+  v = Hash.sha256hmac(v, k);
+  v = Hash.sha256hmac(v, k);
+  <span class="hljs-keyword">var</span> T = BN().fromBuffer(v);
+  <span class="hljs-keyword">var</span> N = Point.getN();</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>if r or s were invalid when this function was used in signing,
+we do not want to actually compute r, s here for efficiency, so,
+we can increment badrs. explained at end of RFC 6979 section 3.2</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> badrs === <span class="hljs-string">'undefined'</span>)
+    badrs = <span class="hljs-number">0</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>also explained in 3.2, we must ensure T is in the proper range (0, N)</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; badrs || !(T.lt(N) &amp;&amp; T.gt(<span class="hljs-number">0</span>)); i++) {
+    k = Hash.sha256hmac(Buffer.concat([v, <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x00</span>])]), k);
+    v = Hash.sha256hmac(v, k);
+    T = BN().fromBuffer(v);
+  }
+
+  <span class="hljs-keyword">this</span>.k = T;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Information about public key recovery:
+<a href="https://bitcointalk.org/index.php?topic=6430.0">https://bitcointalk.org/index.php?topic=6430.0</a>
+<a href="http://stackoverflow.com/questions/19665491/how-do-i-get-an-ecdsa-public-key-from-just-a-bitcoin-signature-sec1-4-1-6-k">http://stackoverflow.com/questions/19665491/how-do-i-get-an-ecdsa-public-key-from-just-a-bitcoin-signature-sec1-4-1-6-k</a>
+This code was originally taken from BitcoinJS</p></div></div><div class="code"><div class="wrapper">ECDSA.prototype.sig2pubkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> i = <span class="hljs-keyword">this</span>.sig.i;
+  <span class="hljs-keyword">if</span> (!(i === <span class="hljs-number">0</span> || i === <span class="hljs-number">1</span> || i === <span class="hljs-number">2</span> || i === <span class="hljs-number">3</span>))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'i must be equal to 0, 1, 2, or 3'</span>);
+
+  <span class="hljs-keyword">var</span> e = BN().fromBuffer(<span class="hljs-keyword">this</span>.hashbuf);
+  <span class="hljs-keyword">var</span> r = <span class="hljs-keyword">this</span>.sig.r;
+  <span class="hljs-keyword">var</span> s = <span class="hljs-keyword">this</span>.sig.s;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>A set LSB signifies that the y-coordinate is odd</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> isYOdd = i &amp; <span class="hljs-number">1</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The more significant bit specifies whether we should use the
+first or second candidate key.</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> isSecondKey = i &gt;&gt; <span class="hljs-number">1</span>;
+
+  <span class="hljs-keyword">var</span> n = Point.getN();
+  <span class="hljs-keyword">var</span> G = Point.getG();</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>1.1 Let x = r + jn</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> x = isSecondKey ? r.add(n) : r;
+  <span class="hljs-keyword">var</span> R = Point.fromX(isYOdd, x);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>1.4 Check that nR is at infinity</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> nR = R.mul(n);
+
+  <span class="hljs-keyword">if</span> (!nR.isInfinity())
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'nR is not a valid curve point'</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Compute -e from e</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> eNeg = e.neg().mod(n);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>1.6.1 Compute Q = r^-1 (sR - eG)
+Q = r^-1 (sR + -eG)</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> rInv = r.invm(n);
+
+  <span class="hljs-comment">//var Q = R.multiplyTwo(s, G, eNeg).mul(rInv);</span>
+  <span class="hljs-keyword">var</span> Q = R.mul(s).add(G.mul(eNeg)).mul(rInv);
+
+  <span class="hljs-keyword">var</span> pubkey = <span class="hljs-keyword">new</span> Pubkey({point: Q});
+  pubkey.compressed = <span class="hljs-keyword">this</span>.sig.compressed;
+  pubkey.validate();
+
+  <span class="hljs-keyword">return</span> pubkey;
+};
+
+ECDSA.prototype.sigError = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(<span class="hljs-keyword">this</span>.hashbuf) || <span class="hljs-keyword">this</span>.hashbuf.length !== <span class="hljs-number">32</span>)
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'hashbuf must be a 32 byte buffer'</span>;
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">this</span>.keypair.pubkey.validate();
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'Invalid pubkey: '</span> + e;
+  }
+
+  <span class="hljs-keyword">var</span> r = <span class="hljs-keyword">this</span>.sig.r;
+  <span class="hljs-keyword">var</span> s = <span class="hljs-keyword">this</span>.sig.s;
+  <span class="hljs-keyword">if</span> (!(r.gt(<span class="hljs-number">0</span>) &amp;&amp; r.lt(Point.getN()))
+   || !(s.gt(<span class="hljs-number">0</span>) &amp;&amp; s.lt(Point.getN())))
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'r and s not in range'</span>;
+
+  <span class="hljs-keyword">var</span> e = BN().fromBuffer(<span class="hljs-keyword">this</span>.hashbuf);
+  <span class="hljs-keyword">var</span> n = Point.getN();
+  <span class="hljs-keyword">var</span> sinv = s.invm(n);
+  <span class="hljs-keyword">var</span> u1 = sinv.mul(e).mod(n);
+  <span class="hljs-keyword">var</span> u2 = sinv.mul(r).mod(n);
+
+  <span class="hljs-keyword">var</span> p = Point.getG().mulAdd(u1, <span class="hljs-keyword">this</span>.keypair.pubkey.point, u2);
+  <span class="hljs-keyword">if</span> (p.isInfinity())
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'p is infinity'</span>;
+
+  <span class="hljs-keyword">if</span> (!(p.getX().mod(n).cmp(r) === <span class="hljs-number">0</span>))
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'Invalid signature'</span>;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+};
+
+ECDSA.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hashbuf = <span class="hljs-keyword">this</span>.hashbuf;
+  <span class="hljs-keyword">var</span> privkey = <span class="hljs-keyword">this</span>.keypair.privkey;
+
+  <span class="hljs-keyword">var</span> d = privkey.bn;
+
+  <span class="hljs-keyword">if</span> (!hashbuf || !privkey || !d)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'invalid parameters'</span>);
+
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(hashbuf) || hashbuf.length !== <span class="hljs-number">32</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'hashbuf must be a 32 byte buffer'</span>);
+
+  <span class="hljs-keyword">var</span> N = Point.getN();
+  <span class="hljs-keyword">var</span> G = Point.getG();
+  <span class="hljs-keyword">var</span> e = BN().fromBuffer(hashbuf);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>try different values of k until r, s are valid</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> badrs = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">do</span> {
+    <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.k || badrs &gt; <span class="hljs-number">0</span>)
+      <span class="hljs-keyword">this</span>.deterministicK(badrs);
+    badrs++;
+    <span class="hljs-keyword">var</span> k = <span class="hljs-keyword">this</span>.k;
+    <span class="hljs-keyword">var</span> Q = G.mul(k);
+    <span class="hljs-keyword">var</span> r = Q.x.mod(N);
+    <span class="hljs-keyword">var</span> s = k.invm(N).mul(e.add(d.mul(r))).mod(N);
+  } <span class="hljs-keyword">while</span> (r.cmp(<span class="hljs-number">0</span>) &lt;= <span class="hljs-number">0</span> || s.cmp(<span class="hljs-number">0</span>) &lt;= <span class="hljs-number">0</span>);
+
+  <span class="hljs-comment">//enforce low s</span>
+  <span class="hljs-comment">//see BIP 62, "low S values in signatures"</span>
+  <span class="hljs-keyword">if</span> (s.gt(BN().fromBuffer(<span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0'</span>, <span class="hljs-string">'hex'</span>)))) {
+    s = Point.getN().sub(s);
+  }
+
+  <span class="hljs-keyword">this</span>.sig = <span class="hljs-keyword">new</span> Signature({r: r, s: s, compressed: <span class="hljs-keyword">this</span>.keypair.pubkey.compressed});
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+ECDSA.prototype.signRandomK = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">this</span>.randomK();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.sign();
+};
+
+ECDSA.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> obj = {};
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.hashbuf)
+    obj.hashbuf = <span class="hljs-keyword">this</span>.hashbuf.toString(<span class="hljs-string">'hex'</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.keypair)
+    obj.keypair = <span class="hljs-keyword">this</span>.keypair.toString();
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.sig)
+    obj.sig = <span class="hljs-keyword">this</span>.sig.toString();
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.k)
+    obj.k = <span class="hljs-keyword">this</span>.k.toString();
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">JSON</span>.stringify(obj);
+};
+
+ECDSA.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.sigError())
+    <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+ECDSA.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, keypair)</span> {</span>
+  <span class="hljs-keyword">return</span> ECDSA().set({
+    hashbuf: hashbuf,
+    keypair: keypair
+  }).sign().sig;
+};
+
+ECDSA.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, sig, pubkey)</span> {</span>
+  <span class="hljs-keyword">return</span> ECDSA().set({
+    hashbuf: hashbuf,
+    sig: sig,
+    keypair: Keypair().set({pubkey: pubkey})
+  }).verify().verified;
+};
+
+module.exports = ECDSA;</div></div></div></div></body></html>

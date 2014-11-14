@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><title>base58check</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="base58check"><meta name="groc-project-path" content="lib/base58check.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/base58check.js">lib/base58check.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> base58 = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./base58'</span>);
+<span class="hljs-keyword">var</span> sha256sha256 = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>).sha256sha256;
+
+<span class="hljs-keyword">var</span> Base58Check = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Base58Check</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Base58Check))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Base58Check(obj);
+  <span class="hljs-keyword">if</span> (Buffer.isBuffer(obj)) {
+    <span class="hljs-keyword">var</span> buf = obj;
+    <span class="hljs-keyword">this</span>.fromBuffer(buf);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> obj === <span class="hljs-string">'string'</span>) {
+    <span class="hljs-keyword">var</span> str = obj;
+    <span class="hljs-keyword">this</span>.fromString(str);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (obj) {
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Base58Check.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.buf = obj.buf || <span class="hljs-keyword">this</span>.buf || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Base58Check.decode = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(s)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> s !== <span class="hljs-string">'string'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Input must be a string'</span>);
+
+  <span class="hljs-keyword">var</span> buf = base58.decode(s);
+
+  <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-number">4</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Input string too short"</span>);
+
+  <span class="hljs-keyword">var</span> data = buf.slice(<span class="hljs-number">0</span>, -<span class="hljs-number">4</span>);
+  <span class="hljs-keyword">var</span> csum = buf.slice(-<span class="hljs-number">4</span>);
+
+  <span class="hljs-keyword">var</span> hash = sha256sha256(data);
+  <span class="hljs-keyword">var</span> hash4 = hash.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>);
+
+  <span class="hljs-keyword">if</span> (csum.toString(<span class="hljs-string">'hex'</span>) !== hash4.toString(<span class="hljs-string">'hex'</span>))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Checksum mismatch"</span>);
+
+  <span class="hljs-keyword">return</span> data;
+};
+
+Base58Check.encode = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Input must be a buffer'</span>);
+  <span class="hljs-keyword">var</span> checkedBuf = <span class="hljs-keyword">new</span> Buffer(buf.length + <span class="hljs-number">4</span>);
+  <span class="hljs-keyword">var</span> hash = sha256sha256(buf);
+  buf.copy(checkedBuf);
+  hash.copy(checkedBuf, buf.length);
+  <span class="hljs-keyword">return</span> base58.encode(checkedBuf);
+};
+
+Base58Check.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">this</span>.buf = buf;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Base58Check.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = Base58Check.decode(str);
+  <span class="hljs-keyword">this</span>.buf = buf;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Base58Check.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.buf;
+};
+
+Base58Check.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> Base58Check.encode(<span class="hljs-keyword">this</span>.buf);
+};
+
+module.exports = Base58Check;</div></div></div></div></body></html>

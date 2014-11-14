@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="en"><head><title>block</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="block"><meta name="groc-project-path" content="lib/block.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/block.js">lib/block.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Transaction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./transaction'</span>);
+<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Blockheader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./blockheader'</span>);
+<span class="hljs-keyword">var</span> Varint = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./varint'</span>);
+<span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
+
+<span class="hljs-keyword">var</span> Block = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Block</span><span class="hljs-params">(magicnum, blocksize, blockheader, txsvi, txs)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Block))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Block(magicnum, blocksize, blockheader, txsvi, txs);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> magicnum === <span class="hljs-string">'number'</span>) {
+    <span class="hljs-keyword">this</span>.set({
+      magicnum: magicnum,
+      blocksize: blocksize,
+      blockheader: blockheader,
+      txsvi: txsvi,
+      txs: txs
+    });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(magicnum)) {
+    <span class="hljs-keyword">var</span> blockbuf = magicnum;
+    <span class="hljs-keyword">this</span>.fromBuffer(blockbuf);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (magicnum) {
+    <span class="hljs-keyword">var</span> obj = magicnum;
+  }
+};
+
+Block.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.magicnum = <span class="hljs-keyword">typeof</span> obj.magicnum !== <span class="hljs-string">'undefined'</span> ? obj.magicnum : <span class="hljs-keyword">this</span>.magicnum;
+  <span class="hljs-keyword">this</span>.blocksize = <span class="hljs-keyword">typeof</span> obj.blocksize !== <span class="hljs-string">'undefined'</span> ? obj.blocksize : <span class="hljs-keyword">this</span>.blocksize;
+  <span class="hljs-keyword">this</span>.blockheader = obj.blockheader || <span class="hljs-keyword">this</span>.blockheader;
+  <span class="hljs-keyword">this</span>.txsvi = obj.txsvi || <span class="hljs-keyword">this</span>.txsvi;
+  <span class="hljs-keyword">this</span>.txs = obj.txs || <span class="hljs-keyword">this</span>.txs;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Block.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">var</span> txs = [];
+  json.txs.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(tx)</span> {</span>
+    txs.push(Transaction().fromJSON(tx));
+  });
+  <span class="hljs-keyword">this</span>.set({
+    magicnum: json.magicnum,
+    blocksize: json.blocksize,
+    blockheader: Blockheader().fromJSON(json.blockheader),
+    txsvi: Varint().fromJSON(json.txsvi),
+    txs: txs
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Block.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> txs = [];
+  <span class="hljs-keyword">this</span>.txs.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(tx)</span> {</span>
+    txs.push(tx.toJSON());
+  });
+  <span class="hljs-keyword">return</span> {
+    magicnum: <span class="hljs-keyword">this</span>.magicnum,
+    blocksize: <span class="hljs-keyword">this</span>.blocksize,
+    blockheader: <span class="hljs-keyword">this</span>.blockheader.toJSON(),
+    txsvi: <span class="hljs-keyword">this</span>.txsvi.toJSON(),
+    txs: txs
+  };
+};
+
+Block.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+};
+
+Block.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+  <span class="hljs-keyword">this</span>.magicnum = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.blocksize = br.readUInt32LE();
+  <span class="hljs-keyword">this</span>.blockheader = Blockheader().fromBufferReader(br);
+  <span class="hljs-keyword">this</span>.txsvi = Varint(br.readVarintBuf());
+  <span class="hljs-keyword">var</span> txslen = <span class="hljs-keyword">this</span>.txsvi.toNumber();
+  <span class="hljs-keyword">this</span>.txs = [];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; txslen; i++) {
+    <span class="hljs-keyword">this</span>.txs.push(Transaction().fromBufferReader(br));
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Block.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter().concat();
+};
+
+Block.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+  <span class="hljs-keyword">if</span> (!bw)
+    bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.magicnum);
+  bw.writeUInt32LE(<span class="hljs-keyword">this</span>.blocksize);
+  bw.write(<span class="hljs-keyword">this</span>.blockheader.toBuffer());
+  bw.write(<span class="hljs-keyword">this</span>.txsvi.buf);
+  <span class="hljs-keyword">var</span> txslen = <span class="hljs-keyword">this</span>.txsvi.toNumber();
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; txslen; i++) {
+    <span class="hljs-keyword">this</span>.txs[i].toBufferWriter(bw);
+  }
+  <span class="hljs-keyword">return</span> bw;
+};
+
+Block.prototype.hash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> Hash.sha256sha256(<span class="hljs-keyword">this</span>.blockheader.toBuffer());
+};
+
+Block.prototype.id = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> BufferReader(<span class="hljs-keyword">this</span>.hash()).reverse().read();
+};
+
+module.exports = Block;</div></div></div></div></body></html>

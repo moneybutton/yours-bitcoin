@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="en"><head><title>message</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="message"><meta name="groc-project-path" content="lib/message.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/message.js">lib/message.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> ECDSA = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./ecdsa'</span>);
+<span class="hljs-keyword">var</span> Keypair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./keypair'</span>);
+<span class="hljs-keyword">var</span> Privkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./privkey'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
+<span class="hljs-keyword">var</span> Address = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./address'</span>);
+<span class="hljs-keyword">var</span> Signature = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./signature'</span>);
+
+<span class="hljs-keyword">var</span> Message = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Message</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Message))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Message(obj);
+  <span class="hljs-keyword">if</span> (obj)
+    <span class="hljs-keyword">this</span>.set(obj);
+};
+
+Message.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.messagebuf = obj.messagebuf || <span class="hljs-keyword">this</span>.messagebuf;
+  <span class="hljs-keyword">this</span>.keypair = obj.keypair || <span class="hljs-keyword">this</span>.keypair;
+  <span class="hljs-keyword">this</span>.sig = obj.sig || <span class="hljs-keyword">this</span>.sig;
+  <span class="hljs-keyword">this</span>.address = obj.address || <span class="hljs-keyword">this</span>.address;
+  <span class="hljs-keyword">this</span>.verified = <span class="hljs-keyword">typeof</span> obj.verified !== <span class="hljs-string">'undefined'</span> ? obj.verified : <span class="hljs-keyword">this</span>.verified;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Message.magicBytes = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'Bitcoin Signed Message:\n'</span>);
+
+Message.magicHash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(messagebuf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'messagebuf must be a buffer'</span>);
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.writeVarintNum(Message.magicBytes.length);
+  bw.write(Message.magicBytes);
+  bw.writeVarintNum(messagebuf.length);
+  bw.write(messagebuf);
+  <span class="hljs-keyword">var</span> buf = bw.concat();
+
+  <span class="hljs-keyword">var</span> hashbuf = Hash.sha256sha256(buf);
+
+  <span class="hljs-keyword">return</span> hashbuf;
+};
+
+Message.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, keypair)</span> {</span>
+  <span class="hljs-keyword">var</span> m = Message({messagebuf: messagebuf, keypair: keypair});
+  m.sign();
+  <span class="hljs-keyword">var</span> sigbuf = m.sig.toCompact();
+  <span class="hljs-keyword">var</span> sigstr = sigbuf.toString(<span class="hljs-string">'base64'</span>);
+  <span class="hljs-keyword">return</span> sigstr;
+};
+
+Message.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, sigstr, address)</span> {</span>
+  <span class="hljs-keyword">var</span> sigbuf = <span class="hljs-keyword">new</span> Buffer(sigstr, <span class="hljs-string">'base64'</span>);
+  <span class="hljs-keyword">var</span> message = <span class="hljs-keyword">new</span> Message();
+  message.messagebuf = messagebuf;
+  message.sig = Signature().fromCompact(sigbuf);
+  message.address = address;
+
+  <span class="hljs-keyword">return</span> message.verify().verified;
+};
+
+Message.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hashbuf = Message.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
+  <span class="hljs-keyword">var</span> ecdsa = ECDSA({hashbuf: hashbuf, keypair: <span class="hljs-keyword">this</span>.keypair});
+  ecdsa.signRandomK();
+  ecdsa.calci();
+  <span class="hljs-keyword">this</span>.sig = ecdsa.sig;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Message.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hashbuf = Message.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
+
+  <span class="hljs-keyword">var</span> ecdsa = <span class="hljs-keyword">new</span> ECDSA();
+  ecdsa.hashbuf = hashbuf;
+  ecdsa.sig = <span class="hljs-keyword">this</span>.sig;
+  ecdsa.keypair = <span class="hljs-keyword">new</span> Keypair();
+  ecdsa.keypair.pubkey = ecdsa.sig2pubkey();
+
+  <span class="hljs-keyword">if</span> (!ecdsa.verify()) {
+    <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+  }
+
+  <span class="hljs-keyword">var</span> address = Address().fromPubkey(ecdsa.keypair.pubkey, <span class="hljs-literal">undefined</span>, <span class="hljs-keyword">this</span>.sig.compressed);
+  <span class="hljs-comment">//TODO: what if livenet/testnet mismatch?</span>
+  <span class="hljs-keyword">if</span> (address.hashbuf.toString(<span class="hljs-string">'hex'</span>) === <span class="hljs-keyword">this</span>.address.hashbuf.toString(<span class="hljs-string">'hex'</span>))
+    <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">false</span>;
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+module.exports = Message;</div></div></div></div></body></html>

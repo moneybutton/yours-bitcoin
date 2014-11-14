@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="en"><head><title>signature</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="signature"><meta name="groc-project-path" content="lib/signature.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/signature.js">lib/signature.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
+
+<span class="hljs-keyword">var</span> Signature = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Signature</span><span class="hljs-params">(r, s)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Signature))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Signature(r, s);
+  <span class="hljs-keyword">if</span> (r <span class="hljs-keyword">instanceof</span> BN) {
+    <span class="hljs-keyword">this</span>.set({
+      r: r,
+      s: s
+    });
+  }
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (r) {
+    <span class="hljs-keyword">var</span> obj = r;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+Signature.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.r = obj.r || <span class="hljs-keyword">this</span>.r || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">this</span>.s = obj.s || <span class="hljs-keyword">this</span>.s || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">this</span>.i = <span class="hljs-keyword">typeof</span> obj.i !== <span class="hljs-string">'undefined'</span> ? obj.i : <span class="hljs-keyword">this</span>.i; <span class="hljs-comment">//public key recovery parameter in range [0, 3]</span>
+  <span class="hljs-keyword">this</span>.compressed = <span class="hljs-keyword">typeof</span> obj.compressed !== <span class="hljs-string">'undefined'</span> ? obj.compressed : <span class="hljs-keyword">this</span>.compressed; <span class="hljs-comment">//whether the recovered pubkey is compressed</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Signature.prototype.fromCompact = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> compressed = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">var</span> compressed = <span class="hljs-literal">false</span>;
+    i = i + <span class="hljs-number">4</span>;
+  }
+
+  <span class="hljs-keyword">var</span> i = buf.slice(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)[<span class="hljs-number">0</span>] - <span class="hljs-number">27</span> - <span class="hljs-number">4</span>; <span class="hljs-comment">//TODO: handle uncompressed pubkeys</span>
+
+  <span class="hljs-keyword">var</span> b2 = buf.slice(<span class="hljs-number">1</span>, <span class="hljs-number">33</span>);
+  <span class="hljs-keyword">var</span> b3 = buf.slice(<span class="hljs-number">33</span>, <span class="hljs-number">65</span>);
+
+  <span class="hljs-keyword">if</span> (!(i === <span class="hljs-number">0</span> || i === <span class="hljs-number">1</span> || i === <span class="hljs-number">2</span> || i === <span class="hljs-number">3</span>))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'i must be 0, 1, 2, or 3'</span>);
+  <span class="hljs-keyword">if</span> (b2.length !== <span class="hljs-number">32</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'r must be 32 bytes'</span>);
+  <span class="hljs-keyword">if</span> (b3.length !== <span class="hljs-number">32</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'s must be 32 bytes'</span>);
+
+  <span class="hljs-keyword">this</span>.compressed = compressed;
+  <span class="hljs-keyword">this</span>.i = i;
+  <span class="hljs-keyword">this</span>.r = BN().fromBuffer(b2);
+  <span class="hljs-keyword">this</span>.s = BN().fromBuffer(b3);
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Signature.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> obj = Signature.parseDER(buf);
+  <span class="hljs-keyword">this</span>.r = obj.r;
+  <span class="hljs-keyword">this</span>.s = obj.s;
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Signature.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(str, <span class="hljs-string">'hex'</span>);
+  <span class="hljs-keyword">this</span>.fromDER(buf);
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Signature.parseDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(buf))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'DER formatted signature should be a buffer'</span>);
+
+  <span class="hljs-keyword">var</span> header = buf[<span class="hljs-number">0</span>];
+
+  <span class="hljs-keyword">if</span> (header !== <span class="hljs-number">0x30</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Header byte should be 0x30'</span>);
+
+  <span class="hljs-keyword">var</span> length = buf[<span class="hljs-number">1</span>];
+  <span class="hljs-keyword">if</span> (length !== buf.slice(<span class="hljs-number">2</span>).length)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length byte should length of what follows'</span>);
+
+  <span class="hljs-keyword">var</span> rheader = buf[<span class="hljs-number">2</span> + <span class="hljs-number">0</span>];
+  <span class="hljs-keyword">if</span> (rheader !== <span class="hljs-number">0x02</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Integer byte for r should be 0x02'</span>);
+
+  <span class="hljs-keyword">var</span> rlength = buf[<span class="hljs-number">2</span> + <span class="hljs-number">1</span>];
+  <span class="hljs-keyword">var</span> rbuf = buf.slice(<span class="hljs-number">2</span> + <span class="hljs-number">2</span>, <span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength);
+  <span class="hljs-keyword">var</span> r = BN().fromBuffer(rbuf);
+  <span class="hljs-keyword">var</span> rneg = buf[<span class="hljs-number">2</span> + <span class="hljs-number">1</span> + <span class="hljs-number">1</span>] === <span class="hljs-number">0x00</span> ? <span class="hljs-literal">true</span> : <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">if</span> (rlength !== rbuf.length)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length of r incorrect'</span>);
+
+  <span class="hljs-keyword">var</span> sheader = buf[<span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">0</span>];
+  <span class="hljs-keyword">if</span> (sheader !== <span class="hljs-number">0x02</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Integer byte for s should be 0x02'</span>);
+
+  <span class="hljs-keyword">var</span> slength = buf[<span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">1</span>];
+  <span class="hljs-keyword">var</span> sbuf = buf.slice(<span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">2</span>, <span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">2</span> + slength);
+  <span class="hljs-keyword">var</span> s = BN().fromBuffer(sbuf);
+  <span class="hljs-keyword">var</span> sneg = buf[<span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">2</span> + <span class="hljs-number">2</span>] === <span class="hljs-number">0x00</span> ? <span class="hljs-literal">true</span> : <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">if</span> (slength !== sbuf.length)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length of s incorrect'</span>);
+
+  <span class="hljs-keyword">var</span> sumlength = <span class="hljs-number">2</span> + <span class="hljs-number">2</span> + rlength + <span class="hljs-number">2</span> + slength;
+  <span class="hljs-keyword">if</span> (length !== sumlength - <span class="hljs-number">2</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Length of signature incorrect'</span>);
+
+  <span class="hljs-keyword">var</span> obj = {
+    header: header,
+    length: length,
+    rheader: rheader,
+    rlength: rlength,
+    rneg: rneg,
+    rbuf: rbuf,
+    r: r,
+    sheader: sheader,
+    slength: slength,
+    sneg: sneg,
+    sbuf: sbuf,
+    s: s
+  };
+
+  <span class="hljs-keyword">return</span> obj;
+};
+
+Signature.prototype.toCompact = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(i, compressed)</span> {</span>
+  i = <span class="hljs-keyword">typeof</span> i === <span class="hljs-string">'number'</span> ? i : <span class="hljs-keyword">this</span>.i;
+  compressed = <span class="hljs-keyword">typeof</span> compressed === <span class="hljs-string">'boolean'</span> ? compressed : <span class="hljs-keyword">this</span>.compressed;
+
+  <span class="hljs-keyword">if</span> (!(i === <span class="hljs-number">0</span> || i === <span class="hljs-number">1</span> || i === <span class="hljs-number">2</span> || i === <span class="hljs-number">3</span>))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'i must be equal to 0, 1, 2, or 3'</span>);
+  
+  <span class="hljs-keyword">var</span> val = i + <span class="hljs-number">27</span> + <span class="hljs-number">4</span>;
+  <span class="hljs-keyword">if</span> (compressed === <span class="hljs-literal">false</span>)
+    val = val - <span class="hljs-number">4</span>;
+  <span class="hljs-keyword">var</span> b1 = <span class="hljs-keyword">new</span> Buffer([val]);
+  <span class="hljs-keyword">var</span> b2 = <span class="hljs-keyword">this</span>.r.toBuffer({size: <span class="hljs-number">32</span>});
+  <span class="hljs-keyword">var</span> b3 = <span class="hljs-keyword">this</span>.s.toBuffer({size: <span class="hljs-number">32</span>});
+  <span class="hljs-keyword">return</span> Buffer.concat([b1, b2, b3]);
+};
+
+Signature.prototype.toDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> rnbuf = <span class="hljs-keyword">this</span>.r.toBuffer();
+  <span class="hljs-keyword">var</span> snbuf = <span class="hljs-keyword">this</span>.s.toBuffer();
+
+  <span class="hljs-keyword">var</span> rneg = rnbuf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x80</span> ? <span class="hljs-literal">true</span> : <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">var</span> sneg = snbuf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x80</span> ? <span class="hljs-literal">true</span> : <span class="hljs-literal">false</span>;
+
+  <span class="hljs-keyword">var</span> rbuf = rneg ? Buffer.concat([<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x00</span>]), rnbuf]) : rnbuf;
+  <span class="hljs-keyword">var</span> sbuf = sneg ? Buffer.concat([<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x00</span>]), snbuf]) : snbuf;
+
+  <span class="hljs-keyword">var</span> length = <span class="hljs-number">2</span> + rbuf.length + <span class="hljs-number">2</span> + sbuf.length;
+  <span class="hljs-keyword">var</span> rlength = rbuf.length;
+  <span class="hljs-keyword">var</span> slength = sbuf.length;
+  <span class="hljs-keyword">var</span> rheader = <span class="hljs-number">0x02</span>;
+  <span class="hljs-keyword">var</span> sheader = <span class="hljs-number">0x02</span>;
+  <span class="hljs-keyword">var</span> header = <span class="hljs-number">0x30</span>;
+
+  <span class="hljs-keyword">var</span> der = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([header, length, rheader, rlength]), rbuf, <span class="hljs-keyword">new</span> Buffer([sheader, slength]), sbuf]);
+  <span class="hljs-keyword">return</span> der;
+};
+
+Signature.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.toDER();
+  <span class="hljs-keyword">return</span> buf.toString(<span class="hljs-string">'hex'</span>);
+};
+
+module.exports = Signature;</div></div></div></div></body></html>

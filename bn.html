@@ -1,0 +1,126 @@
+<!DOCTYPE html><html lang="en"><head><title>bn</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bn"><meta name="groc-project-path" content="lib/bn.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bn.js">lib/bn.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> _BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'bn.js'</span>);
+
+<span class="hljs-keyword">var</span> BN = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BN</span><span class="hljs-params">(n, base)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BN)) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BN(n, base);
+  }
+  _BN.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
+};
+
+BN.prototype = _BN.prototype;
+
+<span class="hljs-keyword">var</span> reversebuf = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> buf2 = <span class="hljs-keyword">new</span> Buffer(buf.length);
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; buf.length; i++) {
+    buf2[i] = buf[buf.length-<span class="hljs-number">1</span>-i];
+  }
+  <span class="hljs-keyword">return</span> buf2;
+};
+
+BN.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toString();
+};
+
+BN.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> bn = BN(str);
+  bn.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BN.prototype.fromNumber = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> bn = BN(n);
+  bn.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BN.prototype.toNumber = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">parseInt</span>(<span class="hljs-keyword">this</span>[<span class="hljs-string">'toString'</span>](<span class="hljs-number">10</span>), <span class="hljs-number">10</span>);
+};
+
+BN.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> bn = BN(str);
+  bn.copy(<span class="hljs-keyword">this</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BN.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, opts)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opts !== <span class="hljs-string">'undefined'</span> &amp;&amp; opts.endian === <span class="hljs-string">'little'</span>) {
+    buf = reversebuf(buf);
+  }
+  <span class="hljs-keyword">var</span> hex = buf.toString(<span class="hljs-string">'hex'</span>);
+  <span class="hljs-keyword">var</span> bn = <span class="hljs-keyword">new</span> BN(hex, <span class="hljs-number">16</span>);
+  <span class="hljs-keyword">return</span> bn;
+};
+
+BN.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, opts)</span> {</span>
+  <span class="hljs-keyword">var</span> bn = BN.fromBuffer(buf, opts);
+  bn.copy(<span class="hljs-keyword">this</span>);
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BN.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(opts)</span> {</span>
+  <span class="hljs-keyword">var</span> buf;
+  <span class="hljs-keyword">if</span> (opts &amp;&amp; opts.size) {
+    <span class="hljs-keyword">var</span> hex = <span class="hljs-keyword">this</span>.toString(<span class="hljs-number">16</span>, <span class="hljs-number">2</span>);
+    <span class="hljs-keyword">var</span> natlen = hex.length/<span class="hljs-number">2</span>;
+    buf = <span class="hljs-keyword">new</span> Buffer(hex, <span class="hljs-string">'hex'</span>);
+
+    <span class="hljs-keyword">if</span> (natlen == opts.size)
+      buf = buf;
+
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (natlen &gt; opts.size) {
+      buf = buf.slice(natlen - buf.length, buf.length);
+    }
+
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (natlen &lt; opts.size) {
+      <span class="hljs-keyword">var</span> rbuf = <span class="hljs-keyword">new</span> Buffer(opts.size);
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; buf.length; i++)
+        rbuf[rbuf.length-<span class="hljs-number">1</span>-i] = buf[buf.length-<span class="hljs-number">1</span>-i];
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; opts.size - natlen; i++)
+        rbuf[i] = <span class="hljs-number">0</span>;
+      buf = rbuf;
+    }
+  }
+  <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">var</span> hex = <span class="hljs-keyword">this</span>.toString(<span class="hljs-number">16</span>, <span class="hljs-number">2</span>);
+    buf = <span class="hljs-keyword">new</span> Buffer(hex, <span class="hljs-string">'hex'</span>);
+  }
+
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opts !== <span class="hljs-string">'undefined'</span> &amp;&amp; opts.endian === <span class="hljs-string">'little'</span>) {
+    buf = reversebuf(buf);
+  }
+
+  <span class="hljs-keyword">return</span> buf;
+};
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">decorate</span><span class="hljs-params">(name)</span> {</span>
+  BN.prototype[<span class="hljs-string">'_'</span> + name] = BN.prototype[name];
+  <span class="hljs-keyword">var</span> f = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> b === <span class="hljs-string">'string'</span>)
+      b = <span class="hljs-keyword">new</span> BN(b);
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> b === <span class="hljs-string">'number'</span>)
+      b = <span class="hljs-keyword">new</span> BN(b.toString());
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>[<span class="hljs-string">'_'</span> + name](b);
+  };
+  BN.prototype[name] = f;
+};
+
+BN.prototype.gt = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &gt; <span class="hljs-number">0</span>;
+};
+
+BN.prototype.lt = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &lt; <span class="hljs-number">0</span>;
+};
+
+decorate(<span class="hljs-string">'add'</span>);
+decorate(<span class="hljs-string">'sub'</span>);
+decorate(<span class="hljs-string">'mul'</span>);
+decorate(<span class="hljs-string">'mod'</span>);
+decorate(<span class="hljs-string">'div'</span>);
+decorate(<span class="hljs-string">'cmp'</span>);
+decorate(<span class="hljs-string">'gt'</span>);
+decorate(<span class="hljs-string">'lt'</span>);
+
+module.exports = BN;</div></div></div></div></body></html>

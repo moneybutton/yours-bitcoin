@@ -1,0 +1,127 @@
+<!DOCTYPE html><html lang="en"><head><title>expmt/stealth/address</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content="../../"><meta name="groc-document-path" content="expmt/stealth/address"><meta name="groc-project-path" content="lib/expmt/stealth/address.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="../../assets/style.css"><script type="text/javascript" src="../../assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/expmt/stealth/address.js">lib/expmt/stealth/address.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> SKey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./key'</span>);
+<span class="hljs-keyword">var</span> Base58check = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../base58check'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../pubkey'</span>);
+<span class="hljs-keyword">var</span> KDF = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../kdf'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufferwriter'</span>);
+<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufferreader'</span>);
+
+<span class="hljs-keyword">var</span> SAddress = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">SAddress</span><span class="hljs-params">(addrstr)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> SAddress))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> SAddress(addrstr);
+  
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> addrstr === <span class="hljs-string">'string'</span>) {
+    <span class="hljs-keyword">this</span>.fromString(addrstr)
+  }
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(addrstr)) {
+    <span class="hljs-keyword">var</span> buf = addrstr;
+    <span class="hljs-keyword">this</span>.fromBuffer(buf);
+  }
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (addrstr) {
+    <span class="hljs-keyword">var</span> obj = addrstr;
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+SAddress.mainver = <span class="hljs-number">42</span>;
+SAddress.testver = <span class="hljs-number">43</span>;
+
+SAddress.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.payloadPubkey = obj.payloadPubkey || <span class="hljs-keyword">this</span>.payloadPubkey;
+  <span class="hljs-keyword">this</span>.scanPubkey = obj.scanPubkey || <span class="hljs-keyword">this</span>.scanPubkey;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+SAddress.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
+  <span class="hljs-keyword">this</span>.fromString(json);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+SAddress.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toString();
+};
+
+SAddress.prototype.fromSKey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(stealthkey)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    payloadPubkey: stealthkey.payloadKeypair.pubkey,
+    scanPubkey: stealthkey.scanKeypair.pubkey
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+SAddress.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> parsed = SAddress.parseDWBuffer(buf);
+  <span class="hljs-keyword">if</span> ((parsed.version !== SAddress.mainver) &amp;&amp; (parsed.version !== SAddress.testver))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid version'</span>);
+  <span class="hljs-keyword">if</span> (parsed.options !== <span class="hljs-number">0</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid options'</span>);
+  <span class="hljs-keyword">if</span> (!parsed.scanPubkey)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid scanPubkey'</span>);
+  <span class="hljs-keyword">if</span> (parsed.payloadPubkeys.length !== <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must have exactly one payloadPubkey'</span>);
+  <span class="hljs-keyword">if</span> (parsed.nSigs !== <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must require exactly one signature'</span>);
+  <span class="hljs-keyword">if</span> (parsed.prefix.toString() !== <span class="hljs-string">""</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Only blank prefixes supported'</span>);
+  <span class="hljs-keyword">this</span>.scanPubkey = parsed.scanPubkey;
+  <span class="hljs-keyword">this</span>.payloadPubkey = parsed.payloadPubkeys[<span class="hljs-number">0</span>];
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+SAddress.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBuffer(Base58check(str).toBuffer());
+};
+
+SAddress.prototype.getSharedKeypair = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(senderKeypair)</span> {</span>
+  <span class="hljs-keyword">var</span> sharedSecretPoint = <span class="hljs-keyword">this</span>.scanPubkey.point.mul(senderKeypair.privkey.bn);
+  <span class="hljs-keyword">var</span> sharedSecretPubkey = Pubkey(sharedSecretPoint);
+  <span class="hljs-keyword">var</span> buf = sharedSecretPubkey.toDER(<span class="hljs-literal">true</span>);
+  <span class="hljs-keyword">var</span> sharedKeypair = KDF.sha256hmac2keypair(buf);
+
+  <span class="hljs-keyword">return</span> sharedKeypair;
+};
+
+SAddress.prototype.getReceivePubkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(senderKeypair)</span> {</span>
+  <span class="hljs-keyword">var</span> sharedKeypair = <span class="hljs-keyword">this</span>.getSharedKeypair(senderKeypair);
+  <span class="hljs-keyword">var</span> pubkey = Pubkey(<span class="hljs-keyword">this</span>.payloadPubkey.point.add(sharedKeypair.pubkey.point));
+
+  <span class="hljs-keyword">return</span> pubkey;
+};
+
+SAddress.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(networkstr)</span> {</span>
+  <span class="hljs-keyword">if</span> (networkstr === <span class="hljs-string">'testnet'</span>)
+    <span class="hljs-keyword">var</span> version = SAddress.testver;
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">var</span> version = SAddress.mainver;
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  bw.writeUInt8(version);
+  bw.writeUInt8(<span class="hljs-number">0</span>); <span class="hljs-comment">//options</span>
+  bw.write(<span class="hljs-keyword">this</span>.scanPubkey.toDER(<span class="hljs-literal">true</span>));
+  bw.writeUInt8(<span class="hljs-number">1</span>); <span class="hljs-comment">//number of payload keys - we only support 1 (not multisig)</span>
+  bw.write(<span class="hljs-keyword">this</span>.payloadPubkey.toDER(<span class="hljs-literal">true</span>));
+  bw.writeUInt8(<span class="hljs-number">1</span>); <span class="hljs-comment">//number of signatures - we only support 1 (not multisig)</span>
+  bw.writeUInt8(<span class="hljs-number">0</span>); <span class="hljs-comment">//prefix length - we do not support prefix yet</span>
+  <span class="hljs-keyword">var</span> buf = bw.concat();
+  <span class="hljs-keyword">return</span> buf;
+};
+
+SAddress.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(networkstr)</span> {</span>
+  <span class="hljs-keyword">return</span> Base58check(<span class="hljs-keyword">this</span>.toBuffer(networkstr)).toString();
+};
+
+SAddress.parseDWBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufferReader(buf);
+  <span class="hljs-keyword">var</span> parsed = {};
+  parsed.version = br.readUInt8();
+  parsed.options = br.readUInt8();
+  parsed.scanPubkey = Pubkey().fromBuffer(br.read(<span class="hljs-number">33</span>));
+  parsed.nPayloadPubkeys = br.readUInt8();
+  parsed.payloadPubkeys = [];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; parsed.nPayloadPubkeys; i++)
+    parsed.payloadPubkeys.push(Pubkey().fromBuffer(br.read(<span class="hljs-number">33</span>)));
+  parsed.nSigs = br.readUInt8();
+  parsed.nPrefix = br.readUInt8();
+  parsed.prefix = br.read(parsed.nPrefix / <span class="hljs-number">8</span>);
+  <span class="hljs-keyword">return</span> parsed;
+};
+
+module.exports = SAddress;</div></div></div></div></body></html>

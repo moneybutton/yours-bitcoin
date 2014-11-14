@@ -1,0 +1,312 @@
+<!DOCTYPE html><html lang="en"><head><title>bip32</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bip32"><meta name="groc-project-path" content="lib/bip32.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bip32.js">lib/bip32.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Base58Check = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./base58check'</span>);
+<span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
+<span class="hljs-keyword">var</span> Keypair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./keypair'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
+<span class="hljs-keyword">var</span> Privkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./privkey'</span>);
+<span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
+<span class="hljs-keyword">var</span> Random = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./random'</span>);
+<span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> constants = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./constants'</span>);
+
+<span class="hljs-keyword">var</span> BIP32 = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BIP32</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BIP32))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BIP32(obj);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> obj === <span class="hljs-string">'string'</span>) {
+    <span class="hljs-keyword">var</span> str = obj;
+    <span class="hljs-keyword">this</span>.fromString(str);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (obj ) {
+    <span class="hljs-keyword">this</span>.set(obj);
+  }
+};
+
+BIP32.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.version = <span class="hljs-keyword">typeof</span> obj.version !== <span class="hljs-string">'undefined'</span> ? obj.version : <span class="hljs-keyword">this</span>.version;
+  <span class="hljs-keyword">this</span>.depth = <span class="hljs-keyword">typeof</span> obj.depth !== <span class="hljs-string">'undefined'</span> ? obj.depth : <span class="hljs-keyword">this</span>.depth;
+  <span class="hljs-keyword">this</span>.parentfingerprint = obj.parentfingerprint || <span class="hljs-keyword">this</span>.parentfingerprint;
+  <span class="hljs-keyword">this</span>.childindex = obj.childindex || <span class="hljs-keyword">this</span>.childindex;
+  <span class="hljs-keyword">this</span>.chaincode = obj.chaincode || <span class="hljs-keyword">this</span>.chaincode;
+  <span class="hljs-keyword">this</span>.keypair = obj.keypair || <span class="hljs-keyword">this</span>.keypair;
+  <span class="hljs-keyword">this</span>.hasprivkey = <span class="hljs-keyword">typeof</span> obj.hasprivkey !== <span class="hljs-string">'undefined'</span> ? obj.hasprivkey : <span class="hljs-keyword">this</span>.hasprivkey;
+  <span class="hljs-keyword">this</span>.pubkeyhash = obj.pubkeyhash || <span class="hljs-keyword">this</span>.pubkeyhash;
+  <span class="hljs-keyword">this</span>.xpubkey = obj.xpubkey || <span class="hljs-keyword">this</span>.xpubkey;
+  <span class="hljs-keyword">this</span>.xprivkey = obj.xprivkey || <span class="hljs-keyword">this</span>.xprivkey;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BIP32.prototype.fromRandom = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(networkstr)</span> {</span>
+  <span class="hljs-keyword">if</span> (!networkstr)
+    networkstr = <span class="hljs-string">'mainnet'</span>;
+  <span class="hljs-keyword">this</span>.version = constants[networkstr].bip32privkey;
+  <span class="hljs-keyword">this</span>.depth = <span class="hljs-number">0x00</span>;
+  <span class="hljs-keyword">this</span>.parentfingerprint = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>]);
+  <span class="hljs-keyword">this</span>.childindex = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>]);
+  <span class="hljs-keyword">this</span>.chaincode = Random.getRandomBuffer(<span class="hljs-number">32</span>);
+  <span class="hljs-keyword">this</span>.keypair = (<span class="hljs-keyword">new</span> Keypair()).fromRandom();
+  <span class="hljs-keyword">this</span>.hasprivkey = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">this</span>.pubkeyhash = Hash.sha256ripemd160(<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer());
+  <span class="hljs-keyword">this</span>.buildxpubkey();
+  <span class="hljs-keyword">this</span>.buildxprivkey();
+};
+
+BIP32.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+  <span class="hljs-keyword">var</span> bytes = Base58Check.decode(str);
+  <span class="hljs-keyword">this</span>.initFromBytes(bytes);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BIP32.prototype.fromSeed = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bytes, networkstr)</span> {</span>
+  <span class="hljs-keyword">if</span> (!networkstr)
+    networkstr = <span class="hljs-string">'mainnet'</span>;
+
+  <span class="hljs-keyword">if</span> (!Buffer.isBuffer(bytes))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'bytes must be a buffer'</span>);
+  <span class="hljs-keyword">if</span> (bytes.length &lt; <span class="hljs-number">128</span> / <span class="hljs-number">8</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Need more than 128 bytes of entropy'</span>); 
+  <span class="hljs-keyword">if</span> (bytes.length &gt; <span class="hljs-number">512</span> / <span class="hljs-number">8</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'More than 512 bytes of entropy is nonstandard'</span>);
+  <span class="hljs-keyword">var</span> hash = Hash.sha512hmac(bytes, <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'Bitcoin seed'</span>));
+
+  <span class="hljs-keyword">this</span>.depth = <span class="hljs-number">0x00</span>;
+  <span class="hljs-keyword">this</span>.parentfingerprint = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>]);
+  <span class="hljs-keyword">this</span>.childindex = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>]);
+  <span class="hljs-keyword">this</span>.chaincode = hash.slice(<span class="hljs-number">32</span>, <span class="hljs-number">64</span>);
+  <span class="hljs-keyword">this</span>.version = constants[networkstr].bip32privkey;
+  <span class="hljs-keyword">this</span>.keypair = <span class="hljs-keyword">new</span> Keypair();
+  <span class="hljs-keyword">this</span>.keypair.privkey = <span class="hljs-keyword">new</span> Privkey({bn: BN().fromBuffer(hash.slice(<span class="hljs-number">0</span>, <span class="hljs-number">32</span>))});
+  <span class="hljs-keyword">this</span>.keypair.privkey2pubkey();
+  <span class="hljs-keyword">this</span>.hasprivkey = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">this</span>.pubkeyhash = Hash.sha256ripemd160(<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer());
+
+  <span class="hljs-keyword">this</span>.buildxpubkey();
+  <span class="hljs-keyword">this</span>.buildxprivkey();
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BIP32.prototype.initFromBytes = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bytes)</span> {</span></div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Both pub and private extended keys are 78 bytes</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">if</span> (bytes.length != <span class="hljs-number">78</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'not enough data'</span>);
+
+  <span class="hljs-keyword">this</span>.version = bytes.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>).readUInt32BE(<span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.depth = bytes.slice(<span class="hljs-number">4</span>, <span class="hljs-number">5</span>).readUInt8(<span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.parentfingerprint = bytes.slice(<span class="hljs-number">5</span>, <span class="hljs-number">9</span>);
+  <span class="hljs-keyword">this</span>.childindex = bytes.slice(<span class="hljs-number">9</span>, <span class="hljs-number">13</span>).readUInt32BE(<span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.chaincode = bytes.slice(<span class="hljs-number">13</span>, <span class="hljs-number">45</span>);
+
+  <span class="hljs-keyword">var</span> keyBytes = bytes.slice(<span class="hljs-number">45</span>, <span class="hljs-number">78</span>);
+
+  <span class="hljs-keyword">var</span> isPrivate =
+    (<span class="hljs-keyword">this</span>.version == constants.mainnet.bip32privkey ||
+      <span class="hljs-keyword">this</span>.version == constants.testnet.bip32privkey);
+
+  <span class="hljs-keyword">var</span> isPublic =
+    (<span class="hljs-keyword">this</span>.version == constants.mainnet.bip32pubkey ||
+      <span class="hljs-keyword">this</span>.version == constants.testnet.bip32pubkey);
+
+  <span class="hljs-keyword">if</span> (isPrivate &amp;&amp; keyBytes[<span class="hljs-number">0</span>] == <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">this</span>.keypair = <span class="hljs-keyword">new</span> Keypair();
+    <span class="hljs-keyword">this</span>.keypair.privkey = <span class="hljs-keyword">new</span> Privkey({bn: BN().fromBuffer(keyBytes.slice(<span class="hljs-number">1</span>, <span class="hljs-number">33</span>))});
+    <span class="hljs-keyword">this</span>.keypair.privkey2pubkey();
+    <span class="hljs-keyword">this</span>.pubkeyhash = Hash.sha256ripemd160(<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer());
+    <span class="hljs-keyword">this</span>.hasprivkey = <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isPublic &amp;&amp; (keyBytes[<span class="hljs-number">0</span>] == <span class="hljs-number">0x02</span> || keyBytes[<span class="hljs-number">0</span>] == <span class="hljs-number">0x03</span>)) {
+    <span class="hljs-keyword">this</span>.keypair = <span class="hljs-keyword">new</span> Keypair();
+    <span class="hljs-keyword">this</span>.keypair.pubkey = (<span class="hljs-keyword">new</span> Pubkey()).fromDER(keyBytes);
+    <span class="hljs-keyword">this</span>.pubkeyhash = Hash.sha256ripemd160(<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer());
+    <span class="hljs-keyword">this</span>.hasprivkey = <span class="hljs-literal">false</span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid key'</span>);
+  }
+
+  <span class="hljs-keyword">this</span>.buildxpubkey();
+  <span class="hljs-keyword">this</span>.buildxprivkey();
+}
+
+BIP32.prototype.buildxpubkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">this</span>.xpubkey = <span class="hljs-keyword">new</span> Buffer([]);
+
+  <span class="hljs-keyword">var</span> v = <span class="hljs-literal">null</span>;
+  <span class="hljs-keyword">switch</span> (<span class="hljs-keyword">this</span>.version) {
+    <span class="hljs-keyword">case</span> constants.mainnet.bip32pubkey:
+    <span class="hljs-keyword">case</span> constants.mainnet.bip32privkey:
+      v = constants.mainnet.bip32pubkey;
+      <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">case</span> constants.testnet.bip32pubkey:
+    <span class="hljs-keyword">case</span> constants.testnet.bip32privkey:
+      v = constants.testnet.bip32pubkey;
+      <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">default</span>:
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Unknown version'</span>);
+  }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Version</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">this</span>.xpubkey = Buffer.concat([
+    <span class="hljs-keyword">new</span> Buffer([v &gt;&gt; <span class="hljs-number">24</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(v &gt;&gt; <span class="hljs-number">16</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(v &gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([v &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.depth]),
+    <span class="hljs-keyword">this</span>.parentfingerprint,
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">24</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">16</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.childindex &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">this</span>.chaincode,
+    <span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer()
+  ]);
+}
+
+BIP32.prototype.xpubkeyString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(format)</span> {</span>
+  <span class="hljs-keyword">if</span> (format === <span class="hljs-literal">undefined</span> || format === <span class="hljs-string">'base58'</span>) {
+    <span class="hljs-keyword">return</span> Base58Check.encode(<span class="hljs-keyword">this</span>.xpubkey);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (format === <span class="hljs-string">'hex'</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.xpubkey.toString(<span class="hljs-string">'hex'</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'bad format'</span>);
+  }
+}
+
+BIP32.prototype.buildxprivkey = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.hasprivkey) <span class="hljs-keyword">return</span>;
+  <span class="hljs-keyword">this</span>.xprivkey = <span class="hljs-keyword">new</span> Buffer([]);
+
+  <span class="hljs-keyword">var</span> v = <span class="hljs-keyword">this</span>.version;
+
+  <span class="hljs-keyword">this</span>.xprivkey = Buffer.concat([
+    <span class="hljs-keyword">new</span> Buffer([v &gt;&gt; <span class="hljs-number">24</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(v &gt;&gt; <span class="hljs-number">16</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(v &gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([v &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.depth]),
+    <span class="hljs-keyword">this</span>.parentfingerprint,
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">24</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">16</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([(<span class="hljs-keyword">this</span>.childindex &gt;&gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-keyword">this</span>.childindex &amp; <span class="hljs-number">0xff</span>]),
+    <span class="hljs-keyword">this</span>.chaincode,
+    <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>]),
+    <span class="hljs-keyword">this</span>.keypair.privkey.bn.toBuffer({size: <span class="hljs-number">32</span>})
+  ]);
+}
+
+BIP32.prototype.xprivkeyString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(format)</span> {</span>
+  <span class="hljs-keyword">if</span> (format === <span class="hljs-literal">undefined</span> || format === <span class="hljs-string">'base58'</span>) {
+    <span class="hljs-keyword">return</span> Base58Check.encode(<span class="hljs-keyword">this</span>.xprivkey);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (format === <span class="hljs-string">'hex'</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.xprivkey.toString(<span class="hljs-string">'hex'</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'bad format'</span>);
+  }
+}
+
+
+BIP32.prototype.derive = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(path)</span> {</span>
+  <span class="hljs-keyword">var</span> e = path.split(<span class="hljs-string">'/'</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Special cases:</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">if</span> (path == <span class="hljs-string">'m'</span> || path == <span class="hljs-string">'M'</span> || path == <span class="hljs-string">'m\''</span> || path == <span class="hljs-string">'M\''</span>)
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+
+  <span class="hljs-keyword">var</span> bip32 = <span class="hljs-keyword">this</span>;
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> e) {
+    <span class="hljs-keyword">var</span> c = e[i];
+
+    <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) {
+      <span class="hljs-keyword">if</span> (c != <span class="hljs-string">'m'</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'invalid path'</span>);
+      <span class="hljs-keyword">continue</span>;
+    }
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">parseInt</span>(c.replace(<span class="hljs-string">"'"</span>, <span class="hljs-string">""</span>)).toString() !== c.replace(<span class="hljs-string">"'"</span>, <span class="hljs-string">""</span>))
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'invalid path'</span>);
+
+    <span class="hljs-keyword">var</span> usePrivate = (c.length &gt; <span class="hljs-number">1</span>) &amp;&amp; (c[c.length - <span class="hljs-number">1</span>] == <span class="hljs-string">'\''</span>);
+    <span class="hljs-keyword">var</span> childindex = <span class="hljs-built_in">parseInt</span>(usePrivate ? c.slice(<span class="hljs-number">0</span>, c.length - <span class="hljs-number">1</span>) : c) &amp; <span class="hljs-number">0x7fffffff</span>;
+
+    <span class="hljs-keyword">if</span> (usePrivate)
+      childindex += <span class="hljs-number">0x80000000</span>;
+
+    bip32 = bip32.deriveChild(childindex);
+  }
+
+  <span class="hljs-keyword">return</span> bip32;
+}
+
+BIP32.prototype.deriveChild = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(i)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> i !== <span class="hljs-string">'number'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'i must be a number'</span>);
+
+  <span class="hljs-keyword">var</span> ib = [];
+  ib.push((i &gt;&gt; <span class="hljs-number">24</span>) &amp; <span class="hljs-number">0xff</span>);
+  ib.push((i &gt;&gt; <span class="hljs-number">16</span>) &amp; <span class="hljs-number">0xff</span>);
+  ib.push((i &gt;&gt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xff</span>);
+  ib.push(i &amp; <span class="hljs-number">0xff</span>);
+  ib = <span class="hljs-keyword">new</span> Buffer(ib);
+
+  <span class="hljs-keyword">var</span> usePrivate = (i &amp; <span class="hljs-number">0x80000000</span>) != <span class="hljs-number">0</span>;
+
+  <span class="hljs-keyword">var</span> isPrivate =
+    (<span class="hljs-keyword">this</span>.version == constants.mainnet.bip32privkey ||
+      <span class="hljs-keyword">this</span>.version == constants.testnet.bip32privkey);
+
+  <span class="hljs-keyword">if</span> (usePrivate &amp;&amp; (!<span class="hljs-keyword">this</span>.hasprivkey || !isPrivate))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Cannot do private key derivation without private key'</span>);
+
+  <span class="hljs-keyword">var</span> ret = <span class="hljs-literal">null</span>;
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.hasprivkey) {
+    <span class="hljs-keyword">var</span> data = <span class="hljs-literal">null</span>;
+
+    <span class="hljs-keyword">if</span> (usePrivate) {
+      data = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>]), <span class="hljs-keyword">this</span>.keypair.privkey.bn.toBuffer({size: <span class="hljs-number">32</span>}), ib]);
+    } <span class="hljs-keyword">else</span> {
+      data = Buffer.concat([<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer({size: <span class="hljs-number">32</span>}), ib]);
+    }
+
+    <span class="hljs-keyword">var</span> hash = Hash.sha512hmac(data, <span class="hljs-keyword">this</span>.chaincode);
+    <span class="hljs-keyword">var</span> il = BN().fromBuffer(hash.slice(<span class="hljs-number">0</span>, <span class="hljs-number">32</span>), {size: <span class="hljs-number">32</span>});
+    <span class="hljs-keyword">var</span> ir = hash.slice(<span class="hljs-number">32</span>, <span class="hljs-number">64</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>ki = IL + kpar (mod n).</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">var</span> k = il.add(<span class="hljs-keyword">this</span>.keypair.privkey.bn).mod(Point.getN());
+
+    ret = <span class="hljs-keyword">new</span> BIP32();
+    ret.chaincode = ir;
+
+    ret.keypair = <span class="hljs-keyword">new</span> Keypair();
+    ret.keypair.privkey = <span class="hljs-keyword">new</span> Privkey({bn: k});
+    ret.keypair.privkey2pubkey();
+    ret.hasprivkey = <span class="hljs-literal">true</span>;
+
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">var</span> data = Buffer.concat([<span class="hljs-keyword">this</span>.keypair.pubkey.toBuffer(), ib]);
+    <span class="hljs-keyword">var</span> hash = Hash.sha512hmac(data, <span class="hljs-keyword">this</span>.chaincode);
+    <span class="hljs-keyword">var</span> il = BN().fromBuffer(hash.slice(<span class="hljs-number">0</span>, <span class="hljs-number">32</span>));
+    <span class="hljs-keyword">var</span> ir = hash.slice(<span class="hljs-number">32</span>, <span class="hljs-number">64</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Ki = (IL + kpar)<em>G = IL</em>G + Kpar</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">var</span> ilG = Point.getG().mul(il);
+    <span class="hljs-keyword">var</span> Kpar = <span class="hljs-keyword">this</span>.keypair.pubkey.point;
+    <span class="hljs-keyword">var</span> Ki = ilG.add(Kpar);
+    <span class="hljs-keyword">var</span> newpub = <span class="hljs-keyword">new</span> Pubkey();
+    newpub.point = Ki;
+
+    ret = <span class="hljs-keyword">new</span> BIP32();
+    ret.chaincode = ir;
+
+    <span class="hljs-keyword">var</span> keypair = <span class="hljs-keyword">new</span> Keypair();
+    keypair.pubkey = newpub;
+    ret.keypair = keypair;
+    ret.hasprivkey = <span class="hljs-literal">false</span>;
+  }
+
+  ret.childindex = i;
+  ret.parentfingerprint = <span class="hljs-keyword">this</span>.pubkeyhash.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>);
+  ret.version = <span class="hljs-keyword">this</span>.version;
+  ret.depth = <span class="hljs-keyword">this</span>.depth + <span class="hljs-number">1</span>;
+
+  ret.pubkeyhash = Hash.sha256ripemd160(ret.keypair.pubkey.toBuffer());
+
+  ret.buildxpubkey();
+  ret.buildxprivkey();
+
+  <span class="hljs-keyword">return</span> ret;
+}
+
+BIP32.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> isPrivate =
+    (<span class="hljs-keyword">this</span>.version == constants.mainnet.bip32privkey ||
+      <span class="hljs-keyword">this</span>.version == constants.testnet.bip32privkey);
+
+  <span class="hljs-keyword">if</span> (isPrivate)
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.xprivkeyString();
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.xpubkeyString();
+};
+
+module.exports = BIP32;</div></div></div></div></body></html>
