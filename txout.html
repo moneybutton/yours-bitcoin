@@ -8,11 +8,19 @@
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Txout))
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txout(valuebn, scriptvi, script);
   <span class="hljs-keyword">if</span> (valuebn <span class="hljs-keyword">instanceof</span> BN) {
-    <span class="hljs-keyword">this</span>.set({
-      valuebn: valuebn,
-      scriptvi: scriptvi,
-      script: script
-    });
+    <span class="hljs-keyword">if</span> (scriptvi <span class="hljs-keyword">instanceof</span> Script) {
+      script = scriptvi;
+      <span class="hljs-keyword">this</span>.set({
+        valuebn: valuebn
+      });
+      <span class="hljs-keyword">this</span>.setScript(script);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">this</span>.set({
+        valuebn: valuebn,
+        scriptvi: scriptvi,
+        script: script
+      });
+    }
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (valuebn) {
     <span class="hljs-keyword">var</span> obj = valuebn;
     <span class="hljs-keyword">this</span>.set(obj);
@@ -23,6 +31,12 @@ Txout.prototype.set = <span class="hljs-function"><span class="hljs-keyword">fun
   <span class="hljs-keyword">this</span>.valuebn = obj.valuebn || <span class="hljs-keyword">this</span>.valuebn;
   <span class="hljs-keyword">this</span>.scriptvi = obj.scriptvi || <span class="hljs-keyword">this</span>.scriptvi;
   <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txout.prototype.setScript = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(script)</span> {</span>
+  <span class="hljs-keyword">this</span>.scriptvi = Varint(script.toBuffer().length);
+  <span class="hljs-keyword">this</span>.script = script;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 

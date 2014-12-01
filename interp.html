@@ -1,0 +1,754 @@
+<!DOCTYPE html><html lang="en"><head><title>interp</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="interp"><meta name="groc-project-path" content="lib/interp.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/interp.js">lib/interp.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
+<span class="hljs-keyword">var</span> Opcode = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./opcode'</span>);
+<span class="hljs-keyword">var</span> Tx = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./tx'</span>);
+<span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
+<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<span class="hljs-keyword">var</span> Signature = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./signature'</span>);
+<span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Script interpreter. The primary way to use it is via the verify function.
+e.g., Interp().verify( ... );</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Interp = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Interp</span><span class="hljs-params">(script, tx, nin)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Interp))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Interp(script, tx, nin);
+  <span class="hljs-keyword">if</span> (script &amp;&amp; tx &amp;&amp; (<span class="hljs-keyword">typeof</span> nin === <span class="hljs-string">'number'</span>)) {
+    <span class="hljs-keyword">this</span>.initialize();
+    <span class="hljs-keyword">this</span>.set({
+      script: script,
+      tx: tx,
+      nin: nin
+    });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (script) {
+    <span class="hljs-keyword">var</span> obj = script;
+    <span class="hljs-keyword">this</span>.initialize();
+    <span class="hljs-keyword">this</span>.set(obj);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">this</span>.initialize();
+  }
+};
+
+module.exports = Interp;
+
+Interp.prototype.initialize = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.stack = [];
+  <span class="hljs-keyword">this</span>.altstack = [];
+  <span class="hljs-keyword">this</span>.pc = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">this</span>.pbegincodehash = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">this</span>.nOpCount = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">this</span>.vfExec = [];
+  <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">""</span>;
+  <span class="hljs-keyword">this</span>.flags = <span class="hljs-number">0</span>;
+};
+
+Interp.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
+  <span class="hljs-keyword">this</span>.tx = obj.tx || <span class="hljs-keyword">this</span>.tx;
+  <span class="hljs-keyword">this</span>.nin = <span class="hljs-keyword">typeof</span> obj.nin !== <span class="hljs-string">'undefined'</span> ? obj.nin : <span class="hljs-keyword">this</span>.nin;
+  <span class="hljs-keyword">this</span>.stack = obj.stack || <span class="hljs-keyword">this</span>.stack;
+  <span class="hljs-keyword">this</span>.altstack = obj.altack || <span class="hljs-keyword">this</span>.altstack;
+  <span class="hljs-keyword">this</span>.pc = <span class="hljs-keyword">typeof</span> obj.pc !== <span class="hljs-string">'undefined'</span> ? obj.pc : <span class="hljs-keyword">this</span>.pc;
+  <span class="hljs-keyword">this</span>.pbegincodehash = <span class="hljs-keyword">typeof</span> obj.pbegincodehash !== <span class="hljs-string">'undefined'</span> ? obj.pbegincodehash : <span class="hljs-keyword">this</span>.pbegincodehash;
+  <span class="hljs-keyword">this</span>.nOpCount = <span class="hljs-keyword">typeof</span> obj.nOpCount !== <span class="hljs-string">'undefined'</span> ? obj.nOpCount : <span class="hljs-keyword">this</span>.nOpCount;
+  <span class="hljs-keyword">this</span>.vfExec = obj.vfExec || <span class="hljs-keyword">this</span>.vfExec;
+  <span class="hljs-keyword">this</span>.errstr = obj.errstr || <span class="hljs-keyword">this</span>.errstr;
+  <span class="hljs-keyword">this</span>.flags = <span class="hljs-keyword">typeof</span> obj.flags !== <span class="hljs-string">'undefined'</span> ? obj.flags : <span class="hljs-keyword">this</span>.flags;
+};
+
+Interp.true = <span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">1</span>]);
+Interp.false = <span class="hljs-keyword">new</span> Buffer([]);
+
+Script.MAX_SCRIPT_ELEMENT_SIZE = <span class="hljs-number">520</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>flags taken from bitcoind
+bitcoind commit: b5d1b1092998bc95313856d535c632ea5a8f9104</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_NONE = <span class="hljs-number">0</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Evaluate P2SH subscripts (softfork safe, BIP16).</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_P2SH = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">0</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Passing a non-strict-DER signature or one with undefined hashtype to a checksig operation causes script failure.
+Passing a pubkey that is not (0x04 + 64 bytes) or (0x02 or 0x03 + 32 bytes) to checksig causes that pubkey to be
+skipped (not softfork safe: this flag can widen the validity of OP_CHECKSIG OP_NOT).</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_STRICTENC = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">1</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Passing a non-strict-DER signature to a checksig operation causes script failure (softfork safe, BIP62 rule 1)</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_DERSIG = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">2</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Passing a non-strict-DER signature or one with S &gt; order/2 to a checksig operation causes script failure
+(softfork safe, BIP62 rule 5).</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_LOW_S = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">3</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>verify dummy stack item consumed by CHECKMULTISIG is of zero-length (softfork safe, BIP62 rule 7).</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_NULLDUMMY = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">4</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Using a non-push operator in the scriptSig causes script failure (softfork safe, BIP62 rule 2).</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_SIGPUSHONLY = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">5</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Require minimal encodings for all push operations (OP_0... OP_16, OP_1NEGATE where possible, direct
+pushes up to 75 bytes, OP_PUSHDATA up to 255 bytes, OP_PUSHDATA2 for anything larger). Evaluating
+any other push causes the script to fail (BIP62 rule 3).
+In addition, whenever a stack element is interpreted as a number, it must be of minimal length (BIP62 rule 4).
+(softfork safe)</p></div></div><div class="code"><div class="wrapper">Interp.SCRIPT_VERIFY_MINIMALDATA = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">6</span>);
+
+Interp.castToBool = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; buf.length; i++) {
+    <span class="hljs-keyword">if</span> (buf[i] != <span class="hljs-number">0</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>can be negative zero</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (i === buf.length - <span class="hljs-number">1</span> &amp;&amp; buf[i] == <span class="hljs-number">0x80</span>)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>eval code translated from bitcoind
+bitcoind commit: b5d1b1092998bc95313856d535c632ea5a8f9104</p></div></div><div class="code"><div class="wrapper">Interp.prototype.eval = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.script.toBuffer().length &gt; <span class="hljs-number">10000</span>) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_SCRIPT_SIZE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">while</span> (<span class="hljs-keyword">this</span>.pc &lt; <span class="hljs-keyword">this</span>.script.chunks.length) {
+      <span class="hljs-keyword">var</span> fSuccess = <span class="hljs-keyword">this</span>.step();
+      <span class="hljs-keyword">if</span> (!fSuccess)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Size limits</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length + <span class="hljs-keyword">this</span>.altstack.length &gt; <span class="hljs-number">1000</span>) {
+      <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_STACK_SIZE"</span>;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_UNKNOWN_ERROR: "</span> + e;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.vfExec.length &gt; <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_UNBALANCED_CONDITIONAL"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>step code translated from bitcoind
+(extracted from the eval function)
+bitcoind commit: b5d1b1092998bc95313856d535c632ea5a8f9104</p></div></div><div class="code"><div class="wrapper">Interp.prototype.step = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+
+  <span class="hljs-keyword">var</span> fRequireMinimal = (<span class="hljs-keyword">this</span>.flags &amp; Interp.SCRIPT_VERIFY_MINIMALDATA) != <span class="hljs-number">0</span>;
+
+  <span class="hljs-comment">//bool fExec = !count(vfExec.begin(), vfExec.end(), false);</span>
+  <span class="hljs-keyword">var</span> fExec = !(<span class="hljs-keyword">this</span>.vfExec.indexOf(<span class="hljs-literal">false</span>) + <span class="hljs-number">1</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Read instruction</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.script.chunks[<span class="hljs-keyword">this</span>.pc];
+  <span class="hljs-keyword">this</span>.pc++;
+  <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opcodenum === <span class="hljs-string">'undefined'</span>) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_BAD_OPCODE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+  <span class="hljs-keyword">if</span> (chunk.buf &amp;&amp; chunk.buf.length &gt; Interp.MAX_SCRIPT_ELEMENT_SIZE) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_PUSH_SIZE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Note how Opcode.map.OP_RESERVED does not count towards the opcode limit.</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">if</span> (opcodenum &gt; Opcode.map.OP_16 &amp;&amp; ++(<span class="hljs-keyword">this</span>.nOpCount) &gt; <span class="hljs-number">201</span>) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_OP_COUNT"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_CAT ||
+    opcodenum === Opcode.map.OP_SUBSTR ||
+    opcodenum === Opcode.map.OP_LEFT ||
+    opcodenum === Opcode.map.OP_RIGHT ||
+    opcodenum === Opcode.map.OP_INVERT ||
+    opcodenum === Opcode.map.OP_AND ||
+    opcodenum === Opcode.map.OP_OR ||
+    opcodenum === Opcode.map.OP_XOR ||
+    opcodenum === Opcode.map.OP_2MUL ||
+    opcodenum === Opcode.map.OP_2DIV ||
+    opcodenum === Opcode.map.OP_MUL ||
+    opcodenum === Opcode.map.OP_DIV ||
+    opcodenum === Opcode.map.OP_MOD ||
+    opcodenum === Opcode.map.OP_LSHIFT ||
+    opcodenum === Opcode.map.OP_RSHIFT) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_DISABLED_OPCODE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">if</span> (fExec &amp;&amp; <span class="hljs-number">0</span> &lt;= opcodenum &amp;&amp; opcodenum &lt;= Opcode.map.OP_PUSHDATA4) {
+    <span class="hljs-keyword">if</span> (fRequireMinimal &amp;&amp; !<span class="hljs-keyword">this</span>.script.checkMinimalPush(<span class="hljs-keyword">this</span>.pc - <span class="hljs-number">1</span>)) {
+      <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_MINIMALDATA"</span>;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+    <span class="hljs-keyword">if</span> (!chunk.buf)
+      <span class="hljs-keyword">this</span>.stack.push(Interp.false);
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">this</span>.stack.push(chunk.buf); <span class="hljs-comment">// TODO: what if chunk.len !== chunk.buf.length ?</span>
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (fExec || (Opcode.map.OP_IF &lt;= opcodenum &amp;&amp; opcodenum &lt;= Opcode.map.OP_ENDIF))
+  <span class="hljs-keyword">switch</span> (opcodenum)
+  {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Push value</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_1NEGATE:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_1:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_3:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_4:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_5:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_6:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_7:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_8:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_9:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_10:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_11:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_12:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_13:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_14:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_15:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_16:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>( -- value)
+CScriptNum bn((int)opcode - (int)(Opcode.map.OP_1 - 1));</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> n = opcodenum - (Opcode.map.OP_1 - <span class="hljs-number">1</span>);
+      <span class="hljs-keyword">var</span> buf = BN(n).toCScriptNumBuffer();
+      <span class="hljs-keyword">this</span>.stack.push(buf);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The result of these opcodes should always be the minimal way to push the data
+they push, so no need for a CheckMinimalPush here.</p></div></div><div class="code"><div class="wrapper">    }
+    <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Control</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_NOP:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NOP1: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP2: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP3: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP4: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP5:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NOP6: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP7: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP8: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP9: <span class="hljs-keyword">case</span> Opcode.map.OP_NOP10:
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_IF:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NOTIF:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p><expression> if [statements] [else [statements]] endif
+bool fValue = false;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> fValue = <span class="hljs-literal">false</span>;
+      <span class="hljs-keyword">if</span> (fExec)
+      {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+          <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_UNBALANCED_CONDITIONAL"</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+        <span class="hljs-keyword">var</span> vch = <span class="hljs-keyword">this</span>.stack.pop();
+        fValue = Interp.castToBool(vch);
+        <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_NOTIF)
+          fValue = !fValue;
+      }
+      <span class="hljs-keyword">this</span>.vfExec.push(fValue);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ELSE:
+    {
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.vfExec.length === <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_UNBALANCED_CONDITIONAL"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.vfExec[<span class="hljs-keyword">this</span>.vfExec.length - <span class="hljs-number">1</span>] = !<span class="hljs-keyword">this</span>.vfExec[<span class="hljs-keyword">this</span>.vfExec.length - <span class="hljs-number">1</span>];
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ENDIF:
+    {
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.vfExec.length === <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_UNBALANCED_CONDITIONAL"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.vfExec.pop();
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_VERIFY:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(true -- ) or
+(false -- false) and return</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">var</span> fValue = Interp.castToBool(vch);
+      <span class="hljs-keyword">if</span> (fValue)
+        <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_VERIFY"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_RETURN:
+    {
+      <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_OP_RETURN"</span>;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+    <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Stack ops</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_TOALTSTACK:
+    {
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.altstack.push(<span class="hljs-keyword">this</span>.stack.pop());
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_FROMALTSTACK:
+    {
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.altstack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_ALTSTACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.push(<span class="hljs-keyword">this</span>.altstack.pop());
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2DROP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- )</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2DUP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- x1 x2 x1 x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> vch2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">this</span>.stack.push(vch1);
+      <span class="hljs-keyword">this</span>.stack.push(vch2);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_3DUP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 x3 -- x1 x2 x3 x1 x2 x3)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">3</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">3</span>];
+      <span class="hljs-keyword">var</span> vch2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> vch3 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">this</span>.stack.push(vch1);
+      <span class="hljs-keyword">this</span>.stack.push(vch2);
+      <span class="hljs-keyword">this</span>.stack.push(vch3);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2OVER:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 x3 x4 -- x1 x2 x3 x4 x1 x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">4</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">4</span>];
+      <span class="hljs-keyword">var</span> vch2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">3</span>];
+      <span class="hljs-keyword">this</span>.stack.push(vch1);
+      <span class="hljs-keyword">this</span>.stack.push(vch2);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2ROT:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">6</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> spliced = <span class="hljs-keyword">this</span>.stack.splice(<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">6</span>, <span class="hljs-number">2</span>);
+      <span class="hljs-keyword">this</span>.stack.push(spliced[<span class="hljs-number">0</span>]);
+      <span class="hljs-keyword">this</span>.stack.push(spliced[<span class="hljs-number">1</span>]);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_2SWAP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 x3 x4 -- x3 x4 x1 x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">4</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> spliced = <span class="hljs-keyword">this</span>.stack.splice(<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">4</span>, <span class="hljs-number">2</span>);
+      <span class="hljs-keyword">this</span>.stack.push(spliced[<span class="hljs-number">0</span>]);
+      <span class="hljs-keyword">this</span>.stack.push(spliced[<span class="hljs-number">1</span>]);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_IFDUP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x - 0 | x x)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">var</span> fValue = Interp.castToBool(vch);
+      <span class="hljs-keyword">if</span> (fValue)
+        <span class="hljs-keyword">this</span>.stack.push(vch);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_DEPTH:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>-- stacksize</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> vch = BN(<span class="hljs-keyword">this</span>.stack.length).toCScriptNumBuffer();
+      <span class="hljs-keyword">this</span>.stack.push(vch);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_DROP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x -- )</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.pop();
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_DUP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x -- x x)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.push(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>]);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NIP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.splice(<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>, <span class="hljs-number">1</span>);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_OVER:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- x1 x2 x1)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.push(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>]);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_PICK:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ROLL:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(xn ... x2 x1 x0 n - xn ... x2 x1 x0 xn)
+(xn ... x2 x1 x0 n - ... x2 x1 x0 xn)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>int n = CScriptNum(stacktop(-1), fRequireMinimal).getint(); //TODO: support flags here</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">var</span> bn = BN().fromCScriptNumBuffer(buf);
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">if</span> (bn.lt(<span class="hljs-number">0</span>) || bn.gt(<span class="hljs-keyword">this</span>.stack.length)) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - n - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_ROLL)
+        <span class="hljs-keyword">this</span>.stack.splice(<span class="hljs-keyword">this</span>.stack.length - n - <span class="hljs-number">1</span>, <span class="hljs-number">1</span>);
+      <span class="hljs-keyword">this</span>.stack.push(vch);
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ROT:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 x3 -- x2 x3 x1)
+ x2 x1 x3  after first swap
+ x2 x3 x1  after second swap</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">3</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> x1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">3</span>];
+      <span class="hljs-keyword">var</span> x2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> x3 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">3</span>] = x2;
+      <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>] = x3;
+      <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>] = x1;
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_SWAP:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- x2 x1)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> x1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> x2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>] = x2;
+      <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>] = x1;
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_TUCK:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- x2 x1 x2)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.stack.splice(<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>, <span class="hljs-number">0</span>, <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>]);
+    }
+    <span class="hljs-keyword">break</span>;
+
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_SIZE:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(in -- in size)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> bn = BN(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>].length);
+      <span class="hljs-keyword">this</span>.stack.push(bn.toCScriptNumBuffer());
+    }
+    <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Bitwise logic</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_EQUAL:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_EQUALVERIFY:
+    <span class="hljs-comment">//case Opcode.map.OP_NOTEQUAL: // use Opcode.map.OP_NUMNOTEQUAL</span>
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 - bool)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch1 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> vch2 = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">var</span> fEqual = vch1.toString(<span class="hljs-string">'hex'</span>) === vch2.toString(<span class="hljs-string">'hex'</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Opcode.map.OP_NOTEQUAL is disabled because it would be too easy to say
+something like n != 1 and have some wiseguy pass in 1 with extra
+zero bytes after it (numerically, 0x01 == 0x0001 == 0x000001)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-comment">//if (opcode == Opcode.map.OP_NOTEQUAL)</span></div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p> fEqual = !fEqual;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.push(fEqual ? Interp.true : Interp.false);
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_EQUALVERIFY)
+      {
+        <span class="hljs-keyword">if</span> (fEqual)
+          <span class="hljs-keyword">this</span>.stack.pop();
+        <span class="hljs-keyword">else</span> {
+          <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_EQUALVERIFY"</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+      }
+    }
+    <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Numeric</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_1ADD:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_1SUB:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NEGATE:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ABS:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NOT:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_0NOTEQUAL:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(in -- out)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>CScriptNum bn(stacktop(-1), fRequireMinimal); //TODO: enable flags here</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-keyword">var</span> bn = BN().fromCScriptNumBuffer(buf);
+      <span class="hljs-keyword">switch</span> (opcodenum)
+      {
+      <span class="hljs-keyword">case</span> Opcode.map.OP_1ADD:     bn = bn.add(<span class="hljs-number">1</span>); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_1SUB:     bn = bn.sub(<span class="hljs-number">1</span>); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_NEGATE:   bn = bn.neg(); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_ABS:    <span class="hljs-keyword">if</span> (bn.cmp(<span class="hljs-number">0</span>) &lt; <span class="hljs-number">0</span>) bn = bn.neg(); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_NOT:    bn = BN((bn.cmp(<span class="hljs-number">0</span>) === <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_0NOTEQUAL:  bn = BN((bn.cmp(<span class="hljs-number">0</span>) !== <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;
+      <span class="hljs-comment">//default:      assert(!"invalid opcode"); break; // TODO: does this ever occur?</span>
+      }
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.push(bn.toCScriptNumBuffer());
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_ADD:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_SUB:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_BOOLAND:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_BOOLOR:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NUMEQUAL:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NUMEQUALVERIFY:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_NUMNOTEQUAL:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_LESSTHAN:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_GREATERTHAN:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_LESSTHANOREQUAL:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_GREATERTHANOREQUAL:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_MIN:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_MAX:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x1 x2 -- out)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: enable flags here
+CScriptNum bn1(stacktop(-2), fRequireMinimal);
+CScriptNum bn2(stacktop(-1), fRequireMinimal);
+CScriptNum bn(0);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> bn1 = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>]);
+      <span class="hljs-keyword">var</span> bn2 = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>]);
+      <span class="hljs-keyword">var</span> bn = BN(<span class="hljs-number">0</span>);
+
+      <span class="hljs-keyword">switch</span> (opcodenum)
+      {
+      <span class="hljs-keyword">case</span> Opcode.map.OP_ADD:
+        bn = bn1.add(bn2);
+        <span class="hljs-keyword">break</span>;
+
+      <span class="hljs-keyword">case</span> Opcode.map.OP_SUB:
+        bn = bn1.sub(bn2);
+        <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_BOOLAND:       bn = (bn1 != bnZero &amp;&amp; bn2 != bnZero); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_BOOLAND:       bn = BN(((bn1.cmp(<span class="hljs-number">0</span>) !== <span class="hljs-number">0</span>) &amp;&amp; (bn2.cmp(<span class="hljs-number">0</span>) !== <span class="hljs-number">0</span>)) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_BOOLOR:        bn = (bn1 != bnZero || bn2 != bnZero); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_BOOLOR:        bn = BN(((bn1.cmp(<span class="hljs-number">0</span>) !== <span class="hljs-number">0</span>) || (bn2.cmp(<span class="hljs-number">0</span>) !== <span class="hljs-number">0</span>)) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_NUMEQUAL:      bn = (bn1 == bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_NUMEQUAL:      bn = BN((bn1.cmp(bn2) === <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_NUMEQUALVERIFY:    bn = (bn1 == bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_NUMEQUALVERIFY:    bn = BN((bn1.cmp(bn2) === <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_NUMNOTEQUAL:     bn = (bn1 != bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_NUMNOTEQUAL:     bn = BN((bn1.cmp(bn2) !== <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_LESSTHAN:      bn = (bn1 &lt; bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_LESSTHAN:      bn = BN((bn1.cmp(bn2) &lt; <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_GREATERTHAN:     bn = (bn1 &gt; bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_GREATERTHAN:     bn = BN((bn1.cmp(bn2) &gt; <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_LESSTHANOREQUAL:   bn = (bn1 &lt;= bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_LESSTHANOREQUAL:   bn = BN((bn1.cmp(bn2) &lt;= <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>case Opcode.map.OP_GREATERTHANOREQUAL:  bn = (bn1 &gt;= bn2); break;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">case</span> Opcode.map.OP_GREATERTHANOREQUAL:  bn = BN((bn1.cmp(bn2) &gt;= <span class="hljs-number">0</span>) + <span class="hljs-number">0</span>); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_MIN:         bn = (bn1.cmp(bn2) &lt; <span class="hljs-number">0</span> ? bn1 : bn2); <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> Opcode.map.OP_MAX:         bn = (bn1.cmp(bn2) &gt; <span class="hljs-number">0</span> ? bn1 : bn2); <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>default:           assert(!&quot;invalid opcode&quot;); break; //TODO: does this ever occur?</p></div></div><div class="code"><div class="wrapper">      }
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.push(bn.toCScriptNumBuffer());
+
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_NUMEQUALVERIFY)
+      {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>if (CastToBool(stacktop(-1)))</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-keyword">if</span> (bn.cmp(<span class="hljs-number">0</span>) === <span class="hljs-number">0</span>)
+          <span class="hljs-keyword">this</span>.stack.pop();
+        <span class="hljs-keyword">else</span> {
+          <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_NUMEQUALVERIFY"</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+      }
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_WITHIN:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(x min max -- out)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">3</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: enable flags here
+CScriptNum bn1(stacktop(-3), fRequireMinimal);
+CScriptNum bn2(stacktop(-2), fRequireMinimal);
+CScriptNum bn3(stacktop(-1), fRequireMinimal);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> b1 = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">3</span>]);
+      <span class="hljs-keyword">var</span> b2 = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>]);
+      <span class="hljs-keyword">var</span> b3 = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>]);
+      <span class="hljs-comment">//bool fValue = (bn2 &lt;= bn1 &amp;&amp; bn1 &lt; bn3);</span>
+      <span class="hljs-keyword">var</span> fValue = (bn2.cmp(bn1) &lt;= <span class="hljs-number">0</span>) &amp;&amp; (bn1.cmp(bn3) &lt; <span class="hljs-number">0</span>);
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.push(fValue ? Interp.true : Interp.false);
+    }
+    <span class="hljs-keyword">break</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Crypto</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">case</span> Opcode.map.OP_RIPEMD160:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_SHA1:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_SHA256:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_HASH160:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_HASH256:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(in -- hash)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">var</span> vch = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+      <span class="hljs-comment">//valtype vchHash((opcode == Opcode.map.OP_RIPEMD160 || opcode == Opcode.map.OP_SHA1 || opcode == Opcode.map.OP_HASH160) ? 20 : 32);</span>
+      <span class="hljs-keyword">var</span> vchHash;
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_RIPEMD160)
+        vchHash = Hash.ripemd160(vch);
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_SHA1)
+        vchHash = Hash.sha1(vch);
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_SHA256)
+        vchHash = Hash.sha256(vch);
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_HASH160)
+        vchHash = Hash.sha256ripemd160(vch);
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_HASH256)
+        vchHash = Hash.sha256sha256(vch);
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.push(vchHash);
+    }
+    <span class="hljs-keyword">break</span>;                   
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_CODESEPARATOR:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Hash starts after the code separator</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">this</span>.pbegincodehash = <span class="hljs-keyword">this</span>.pc;
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_CHECKSIG:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_CHECKSIGVERIFY:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>(sig pubkey -- bool)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+
+      <span class="hljs-keyword">var</span> vchSig = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">2</span>];
+      <span class="hljs-keyword">var</span> vchPubkey = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Subset of script starting at the most recent codeseparator
+CScript scriptCode(pbegincodehash, pend);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> subscript = Script().set({chunks: <span class="hljs-keyword">this</span>.script.chunks.slice(<span class="hljs-keyword">this</span>.pbegincodehash)});</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Drop the signature, since there&#39;s no way for a signature to sign itself</p></div></div><div class="code"><div class="wrapper">      subscript.findAndDelete(vchSig);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: support checking signature encoding with flags
+if (!CheckSignatureEncoding(vchSig, flags, serror)) {
+  //serror is set
+  return false;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-comment">// </span></div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: check public key encoding with flags
+bool fSuccess = CheckPubKeyEncoding(vchPubKey, flags) &amp;&amp; checker.CheckSig(vchSig, vchPubKey, scriptCode);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> sig = Signature().fromTx(vchSig);
+      <span class="hljs-keyword">var</span> pubkey = Pubkey().fromBuffer(vchPubkey);
+      <span class="hljs-keyword">var</span> fSuccess = <span class="hljs-keyword">this</span>.tx.verify(sig, pubkey, <span class="hljs-keyword">this</span>.nin, subscript);
+
+      <span class="hljs-keyword">this</span>.stack.pop();
+      <span class="hljs-keyword">this</span>.stack.pop();</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>stack.push_back(fSuccess ? vchTrue : vchFalse);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">this</span>.stack.push(fSuccess ? Interp.true : Interp.false);
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_CHECKSIGVERIFY)
+      {
+        <span class="hljs-keyword">if</span> (fSuccess)
+          <span class="hljs-keyword">this</span>.stack.pop();
+        <span class="hljs-keyword">else</span> {
+          <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_CHECKSIGVERIFY"</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+      }
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">case</span> Opcode.map.OP_CHECKMULTISIG:
+    <span class="hljs-keyword">case</span> Opcode.map.OP_CHECKMULTISIGVERIFY:
+    {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>([sig ...] num_of_signatures [pubkey ...] num_of_pubkeys -- bool)</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> i = <span class="hljs-number">1</span>;
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; i) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: flags: fRequireMinimal
+int nKeysCount = CScriptNum(stacktop(-i), fRequireMinimal).getint();</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> nKeysCount = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - i]).toNumber();
+      <span class="hljs-keyword">if</span> (nKeysCount &lt; <span class="hljs-number">0</span> || nKeysCount &gt; <span class="hljs-number">20</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_PUBKEY_COUNT"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }
+      <span class="hljs-keyword">this</span>.nOpCount += nKeysCount;
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.nOpCount &gt; <span class="hljs-number">201</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_OP_COUNT"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>int ikey = ++i;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> ikey = ++i;
+      i += nKeysCount;
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; i) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>int nSigsCount = CScriptNum(stacktop(-i), fRequireMinimal).getint();</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> nSigsCount = BN().fromCScriptNumBuffer(<span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>]).toNumber();
+      <span class="hljs-keyword">if</span> (nSigsCount &lt; <span class="hljs-number">0</span> || nSigsCount &gt; nKeysCount) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_SIG_COUNT"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>int isig = ++i;</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> isig = ++i;
+      i += nSigsCount;
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; i) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Subset of script starting at the most recent codeseparator</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">var</span> subscript = Script().set({chunks: <span class="hljs-keyword">this</span>.script.chunks.slice(<span class="hljs-keyword">this</span>.pbegincodehash)});</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Drop the signatures, since there&#39;s no way for a signature to sign itself</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> k = <span class="hljs-number">0</span>; k &lt; nSigsCount; k++)
+      {
+        <span class="hljs-keyword">var</span> vchSig = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - isig - k];
+        subscript.findAndDelete(vchSig);
+      }
+
+      <span class="hljs-keyword">var</span> fSuccess = <span class="hljs-literal">true</span>;
+      <span class="hljs-keyword">while</span> (fSuccess &amp;&amp; nSigsCount &gt; <span class="hljs-number">0</span>)
+      {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>valtype&amp; vchSig  = stacktop(-isig);</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-keyword">var</span> vchSig = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - isig];</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>valtype&amp; vchPubKey = stacktop(-ikey);</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-keyword">var</span> vchPubKey = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - ikey];</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: flags here
+if (!CheckSignatureEncoding(vchSig, flags, serror)) {
+  // serror is set
+  return false;</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-comment">// </span></div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Check signature
+TODO: check encodings here
+bool fOk = CheckPubKeyEncoding(vchPubKey, flags) &amp;&amp; checker.CheckSig(vchSig, vchPubKey, scriptCode);</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-keyword">var</span> sig = Signature().fromTx(vchSig);
+        <span class="hljs-keyword">var</span> pubkey = Pubkey().fromBuffer(vchPubkey);
+        <span class="hljs-keyword">var</span> fOk = <span class="hljs-keyword">this</span>.tx.verify(sig, pubkey, <span class="hljs-keyword">this</span>.nin, subscript);
+
+        <span class="hljs-keyword">if</span> (fOk) {
+          isig++;
+          nSigsCount--;
+        }
+        ikey++;
+        nKeysCount--;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>If there are more signatures left than keys left,
+then too many signatures have failed</p></div></div><div class="code"><div class="wrapper">        <span class="hljs-keyword">if</span> (nSigsCount &gt; nKeysCount)
+          fSuccess = <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Clean up stack of actual arguments</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">while</span> (i-- &gt; <span class="hljs-number">1</span>)
+        <span class="hljs-keyword">this</span>.stack.pop();</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>A bug causes CHECKMULTISIG to consume one extra argument
+whose contents were not checked in any way.
+Unfortunately this is a potential source of mutability,
+so optionally verify it is exactly equal to zero prior
+to removing it from the stack.</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length &lt; <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_INVALID_STACK_OPERATION"</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: flags here
+if ((flags &amp; SCRIPT_VERIFY_NULLDUMMY) &amp;&amp; stacktop(-1).size())
+  return set_error(serror, SCRIPT_ERR_SIG_NULLDUMMY);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">this</span>.stack.pop();</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>stack.push_back(fSuccess ? vchTrue : vchFalse);</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">this</span>.stack.push(fSuccess ? Interp.true : Interp.false);
+
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_CHECKMULTISIGVERIFY)
+      {
+        <span class="hljs-keyword">if</span> (fSuccess)
+          <span class="hljs-keyword">this</span>.stack.pop();
+        <span class="hljs-keyword">else</span> {
+          <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_CHECKMULTISIGVERIFY"</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+      }
+    }
+    <span class="hljs-keyword">break</span>;
+
+    <span class="hljs-keyword">default</span>:
+      <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_BAD_OPCODE"</span>;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}
+
+Interp.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(scriptSig, scriptPubkey, tx, nin, flags)</span> {</span>
+  <span class="hljs-keyword">this</span>.set({
+    script: scriptSig,
+    tx: tx,
+    nin: nin,
+    flags: flags
+  });
+
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.eval())
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: flags: p2sh stack copy here
+if (flags &amp; Interp.SCRIPT_VERIFY_P2SH)
+  var stackCopy = this.stack;</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> stack = <span class="hljs-keyword">this</span>.stack;
+  <span class="hljs-keyword">this</span>.initialize();
+  <span class="hljs-keyword">this</span>.set({
+    script: scriptPubkey,
+    stack: stack,
+    tx: tx,
+    nin: nin,
+    flags: flags
+  });
+
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.eval())
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.stack.length === <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_EVAL_FALSE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.stack[<span class="hljs-keyword">this</span>.stack.length - <span class="hljs-number">1</span>];
+  <span class="hljs-keyword">if</span> (!Interp.castToBool(buf)) {
+    <span class="hljs-keyword">this</span>.errstr = <span class="hljs-string">"SCRIPT_ERR_EVAL_FALSE"</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>TODO: flags: insert p2sh support here</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+};</div></div></div></div></body></html>

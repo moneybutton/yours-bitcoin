@@ -2,13 +2,14 @@
 <span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
 <span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
 
-<span class="hljs-keyword">var</span> Signature = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Signature</span><span class="hljs-params">(r, s)</span> {</span>
+<span class="hljs-keyword">var</span> Signature = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Signature</span><span class="hljs-params">(r, s, nhashtype)</span> {</span>
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Signature))
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Signature(r, s);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Signature(r, s, nhashtype);
   <span class="hljs-keyword">if</span> (r <span class="hljs-keyword">instanceof</span> BN) {
     <span class="hljs-keyword">this</span>.set({
       r: r,
-      s: s
+      s: s,
+      nhashtype: nhashtype
     });
   }
   <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (r) {
@@ -17,15 +18,19 @@
   }
 };
 
+Signature.SIGHASH_ALL = <span class="hljs-number">0x00000001</span>;
+Signature.SIGHASH_NONE = <span class="hljs-number">0x00000002</span>;
+Signature.SIGHASH_SINGLE = <span class="hljs-number">0x00000003</span>;
+Signature.SIGHASH_ANYONECANPAY = <span class="hljs-number">0x00000080</span>;
+
 Signature.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.r = obj.r || <span class="hljs-keyword">this</span>.r || <span class="hljs-literal">undefined</span>;
   <span class="hljs-keyword">this</span>.s = obj.s || <span class="hljs-keyword">this</span>.s || <span class="hljs-literal">undefined</span>;
+  <span class="hljs-keyword">this</span>.nhashtype = <span class="hljs-keyword">typeof</span> obj.nhashtype !== <span class="hljs-string">'undefined'</span> ? obj.nhashtype : <span class="hljs-keyword">this</span>.nhashtype;
   <span class="hljs-keyword">this</span>.i = <span class="hljs-keyword">typeof</span> obj.i !== <span class="hljs-string">'undefined'</span> ? obj.i : <span class="hljs-keyword">this</span>.i; <span class="hljs-comment">//public key recovery parameter in range [0, 3]</span>
   <span class="hljs-keyword">this</span>.compressed = <span class="hljs-keyword">typeof</span> obj.compressed !== <span class="hljs-string">'undefined'</span> ? obj.compressed : <span class="hljs-keyword">this</span>.compressed; <span class="hljs-comment">//whether the recovered pubkey is compressed</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-};
-
-Signature.prototype.fromCompact = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The format used by &quot;message&quot;</p></div></div><div class="code"><div class="wrapper">Signature.prototype.fromCompact = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">var</span> compressed = <span class="hljs-literal">true</span>;
   <span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">0</span>) {
     <span class="hljs-keyword">var</span> compressed = <span class="hljs-literal">false</span>;
@@ -50,13 +55,17 @@ Signature.prototype.fromCompact = <span class="hljs-function"><span class="hljs-
   <span class="hljs-keyword">this</span>.s = BN().fromBuffer(b3);
 
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-};
-
-Signature.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The format used in a tx, except without the nhashtype at the end</p></div></div><div class="code"><div class="wrapper">Signature.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">var</span> obj = Signature.parseDER(buf);
   <span class="hljs-keyword">this</span>.r = obj.r;
   <span class="hljs-keyword">this</span>.s = obj.s;
 
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The format used in a tx</p></div></div><div class="code"><div class="wrapper">Signature.prototype.fromTx = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> nhashtype = buf.readUInt8(buf.length - <span class="hljs-number">1</span>);
+  <span class="hljs-keyword">var</span> derbuf = buf.slice(<span class="hljs-number">0</span>, buf.length - <span class="hljs-number">1</span>);
+  <span class="hljs-keyword">this</span>.fromDER(derbuf);
+  <span class="hljs-keyword">this</span>.nhashtype = nhashtype;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
@@ -159,6 +168,13 @@ Signature.prototype.toDER = <span class="hljs-function"><span class="hljs-keywor
 
   <span class="hljs-keyword">var</span> der = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([header, length, rheader, rlength]), rbuf, <span class="hljs-keyword">new</span> Buffer([sheader, slength]), sbuf]);
   <span class="hljs-keyword">return</span> der;
+};
+
+Signature.prototype.toTx = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> derbuf = <span class="hljs-keyword">this</span>.toDER();
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
+  buf.writeUInt8(<span class="hljs-keyword">this</span>.nhashtype, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">return</span> Buffer.concat([derbuf, buf]);
 };
 
 Signature.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>

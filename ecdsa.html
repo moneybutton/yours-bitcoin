@@ -15,6 +15,7 @@
 
 ECDSA.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.hashbuf = obj.hashbuf || <span class="hljs-keyword">this</span>.hashbuf;
+  <span class="hljs-keyword">this</span>.endian = obj.endian || <span class="hljs-keyword">this</span>.endian; <span class="hljs-comment">//the endianness of hashbuf</span>
   <span class="hljs-keyword">this</span>.keypair = obj.keypair || <span class="hljs-keyword">this</span>.keypair;
   <span class="hljs-keyword">this</span>.sig = obj.sig || <span class="hljs-keyword">this</span>.sig;
   <span class="hljs-keyword">this</span>.k = obj.k || <span class="hljs-keyword">this</span>.k;
@@ -132,7 +133,7 @@ ECDSA.prototype.sigError = <span class="hljs-function"><span class="hljs-keyword
    || !(s.gt(<span class="hljs-number">0</span>) &amp;&amp; s.lt(Point.getN())))
     <span class="hljs-keyword">return</span> <span class="hljs-string">'r and s not in range'</span>;
 
-  <span class="hljs-keyword">var</span> e = BN().fromBuffer(<span class="hljs-keyword">this</span>.hashbuf);
+  <span class="hljs-keyword">var</span> e = BN().fromBuffer(<span class="hljs-keyword">this</span>.hashbuf, <span class="hljs-keyword">this</span>.endian ? {endian: <span class="hljs-keyword">this</span>.endian} : <span class="hljs-literal">undefined</span>);
   <span class="hljs-keyword">var</span> n = Point.getN();
   <span class="hljs-keyword">var</span> sinv = s.invm(n);
   <span class="hljs-keyword">var</span> u1 = sinv.mul(e).mod(n);
@@ -162,7 +163,7 @@ ECDSA.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">fu
 
   <span class="hljs-keyword">var</span> N = Point.getN();
   <span class="hljs-keyword">var</span> G = Point.getG();
-  <span class="hljs-keyword">var</span> e = BN().fromBuffer(hashbuf);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>try different values of k until r, s are valid</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> badrs = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">var</span> e = BN().fromBuffer(hashbuf, <span class="hljs-keyword">this</span>.endian ? {endian: <span class="hljs-keyword">this</span>.endian} : <span class="hljs-literal">undefined</span>);</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>try different values of k until r, s are valid</p></div></div><div class="code"><div class="wrapper">  <span class="hljs-keyword">var</span> badrs = <span class="hljs-number">0</span>;
   <span class="hljs-keyword">do</span> {
     <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.k || badrs &gt; <span class="hljs-number">0</span>)
       <span class="hljs-keyword">this</span>.deterministicK(badrs);
@@ -209,16 +210,18 @@ ECDSA.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-ECDSA.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, keypair)</span> {</span>
+ECDSA.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, keypair, endian)</span> {</span>
   <span class="hljs-keyword">return</span> ECDSA().set({
     hashbuf: hashbuf,
+    endian: endian,
     keypair: keypair
   }).sign().sig;
 };
 
-ECDSA.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, sig, pubkey)</span> {</span>
+ECDSA.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf, sig, pubkey, endian)</span> {</span>
   <span class="hljs-keyword">return</span> ECDSA().set({
     hashbuf: hashbuf,
+    endian: endian,
     sig: sig,
     keypair: Keypair().set({pubkey: pubkey})
   }).verify().verified;

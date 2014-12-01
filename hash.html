@@ -53,7 +53,12 @@ Hash.sha512 = <span class="hljs-function"><span class="hljs-keyword">function</s
 
 Hash.sha512.blocksize = <span class="hljs-number">1024</span>;
 
-Hash.hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashf, data, key)</span> {</span>
+Hash.hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashfstr, data, key)</span> {</span>
+  <span class="hljs-keyword">if</span> (hashfstr !== <span class="hljs-string">'sha1'</span> &amp;&amp; hashfstr !== <span class="hljs-string">'sha256'</span> &amp;&amp; hashfstr !== <span class="hljs-string">'sha512'</span> &amp;&amp; hashfstr !== <span class="hljs-string">'ripemd160'</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid choice of hash function'</span>);
+
+  <span class="hljs-keyword">var</span> hashf = Hash[hashfstr];
+
   <span class="hljs-keyword">if</span> (!Buffer.isBuffer(data) || !Buffer.isBuffer(key))
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'data and key must be buffers'</span>);
 
@@ -85,19 +90,19 @@ Hash.hmac = <span class="hljs-function"><span class="hljs-keyword">function</spa
 };
 
 Hash.sha1hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
-  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha1, data, key);
+  <span class="hljs-keyword">return</span> Hash.hmac(<span class="hljs-string">'sha1'</span>, data, key);
 };
 
 Hash.sha1hmac.bitsize = <span class="hljs-number">160</span>;
 
 Hash.sha256hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
-  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha256, data, key);
+  <span class="hljs-keyword">return</span> Hash.hmac(<span class="hljs-string">'sha256'</span>, data, key);
 };
 
 Hash.sha256hmac.bitsize = <span class="hljs-number">256</span>;
 
 Hash.sha512hmac = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data, key)</span> {</span>
-  <span class="hljs-keyword">return</span> Hash.hmac(Hash.sha512, data, key);
+  <span class="hljs-keyword">return</span> Hash.hmac(<span class="hljs-string">'sha512'</span>, data, key);
 };
 
 Hash.sha512hmac.bitsize = <span class="hljs-number">512</span>;</div></div></div></div></body></html>

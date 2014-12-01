@@ -27,9 +27,24 @@ BufferWriter.prototype.write = <span class="hljs-function"><span class="hljs-key
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
+BufferWriter.prototype.writeReverse = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> buf2 = <span class="hljs-keyword">new</span> Buffer(buf.length);
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; buf2.length; i++)
+    buf2[i] = buf[buf.length - <span class="hljs-number">1</span> - i];
+  <span class="hljs-keyword">this</span>.bufs.push(buf2);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
 BufferWriter.prototype.writeUInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
   buf.writeUInt8(n, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.write(buf);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BufferWriter.prototype.writeInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
+  buf.writeInt8(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
@@ -41,9 +56,23 @@ BufferWriter.prototype.writeUInt16BE = <span class="hljs-function"><span class="
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
+BufferWriter.prototype.writeInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
+  buf.writeInt16BE(n, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.write(buf);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
 BufferWriter.prototype.writeUInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
   buf.writeUInt16LE(n, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.write(buf);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BufferWriter.prototype.writeInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
+  buf.writeInt16LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
@@ -55,9 +84,23 @@ BufferWriter.prototype.writeUInt32BE = <span class="hljs-function"><span class="
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
+BufferWriter.prototype.writeInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
+  buf.writeInt32BE(n, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.write(buf);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
 BufferWriter.prototype.writeUInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
   buf.writeUInt32LE(n, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.write(buf);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BufferWriter.prototype.writeInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
+  buf.writeInt32LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
@@ -70,8 +113,7 @@ BufferWriter.prototype.writeUInt64BEBN = <span class="hljs-function"><span class
 
 BufferWriter.prototype.writeUInt64LEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
   <span class="hljs-keyword">var</span> buf = bn.toBuffer({size: <span class="hljs-number">8</span>});
-  <span class="hljs-keyword">var</span> reversebuf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-built_in">Array</span>.apply(<span class="hljs-keyword">new</span> <span class="hljs-built_in">Array</span>(), buf).reverse());
-  <span class="hljs-keyword">this</span>.write(reversebuf);
+  <span class="hljs-keyword">this</span>.writeReverse(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 

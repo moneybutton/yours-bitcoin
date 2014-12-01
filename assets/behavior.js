@@ -21,8 +21,8 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "type": "heading",
           "data": {
             "level": 1,
-            "title": "fullnode",
-            "slug": "fullnode",
+            "title": "fullnode (alpha)",
+            "slug": "fullnode-alpha",
             "isFileHeader": true
           },
           "depth": 1,
@@ -47,6 +47,14 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
               "type": "heading",
               "data": {
                 "level": 2,
+                "title": "Coverage",
+                "slug": "coverage"
+              },
+              "depth": 2
+            }, {
+              "type": "heading",
+              "data": {
+                "level": 2,
                 "title": "Browser bundle",
                 "slug": "browser-bundle"
               },
@@ -54,7 +62,7 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
             }
           ]
         },
-        "title": "fullnode"
+        "title": "fullnode (alpha)"
       },
       "depth": 1,
       "outline": [
@@ -72,6 +80,14 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
             "level": 2,
             "title": "Testing",
             "slug": "testing"
+          },
+          "depth": 2
+        }, {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "title": "Coverage",
+            "slug": "coverage"
           },
           "depth": 2
         }, {
@@ -562,11 +578,11 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
                   "foldPrefix": "^",
                   "name": "JavaScript"
                 },
-                "sourcePath": "/home/ryan/dev/fullnode/lib/expmt/stealth/transaction.js",
-                "projectPath": "lib/expmt/stealth/transaction.js",
-                "targetPath": "expmt/stealth/transaction",
-                "pageTitle": "expmt/stealth/transaction",
-                "title": "transaction"
+                "sourcePath": "/home/ryan/dev/fullnode/lib/expmt/stealth/tx.js",
+                "projectPath": "lib/expmt/stealth/tx.js",
+                "targetPath": "expmt/stealth/tx",
+                "pageTitle": "expmt/stealth/tx",
+                "title": "tx"
               },
               "depth": 3,
               "outline": []
@@ -591,6 +607,26 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "targetPath": "hash",
         "pageTitle": "hash",
         "title": "hash"
+      },
+      "depth": 1,
+      "outline": []
+    }, {
+      "type": "file",
+      "data": {
+        "language": {
+          "nameMatchers": [".js"],
+          "pygmentsLexer": "javascript",
+          "multiLineComment": ["/*", "*", "*/"],
+          "singleLineComment": ["//"],
+          "ignorePrefix": "}",
+          "foldPrefix": "^",
+          "name": "JavaScript"
+        },
+        "sourcePath": "/home/ryan/dev/fullnode/lib/interp.js",
+        "projectPath": "lib/interp.js",
+        "targetPath": "interp",
+        "pageTitle": "interp",
+        "title": "interp"
       },
       "depth": 1,
       "outline": []
@@ -806,11 +842,11 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "foldPrefix": "^",
           "name": "JavaScript"
         },
-        "sourcePath": "/home/ryan/dev/fullnode/lib/transaction.js",
-        "projectPath": "lib/transaction.js",
-        "targetPath": "transaction",
-        "pageTitle": "transaction",
-        "title": "transaction"
+        "sourcePath": "/home/ryan/dev/fullnode/lib/tx.js",
+        "projectPath": "lib/tx.js",
+        "targetPath": "tx",
+        "pageTitle": "tx",
+        "title": "tx"
       },
       "depth": 1,
       "outline": []

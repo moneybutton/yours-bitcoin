@@ -6,14 +6,30 @@
 <span class="hljs-keyword">var</span> Txin = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Txin</span><span class="hljs-params">(txidbuf, txoutnum, scriptvi, script, seqnum)</span> {</span>
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Txin))
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txin(txidbuf, txoutnum, scriptvi, script, seqnum);
-  <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf)) {
+  <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf) &amp;&amp; <span class="hljs-keyword">typeof</span> txoutnum !== <span class="hljs-string">'undefined'</span>) {
     <span class="hljs-keyword">if</span> (txidbuf.length !== <span class="hljs-number">32</span>)
       <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'txidbuf must be 32 bytes'</span>);
-    <span class="hljs-keyword">this</span>.txidbuf = txidbuf;
-    <span class="hljs-keyword">this</span>.txoutnum = txoutnum;
-    <span class="hljs-keyword">this</span>.scriptvi = scriptvi;
-    <span class="hljs-keyword">this</span>.script = script;
-    <span class="hljs-keyword">this</span>.seqnum = seqnum;
+    <span class="hljs-keyword">if</span> (scriptvi <span class="hljs-keyword">instanceof</span> Script) {
+      seqnum = script;
+      script = scriptvi;
+      <span class="hljs-keyword">this</span>.set({
+        txidbuf: txidbuf,
+        txoutnum: txoutnum,
+        seqnum: seqnum
+      });
+      <span class="hljs-keyword">this</span>.setScript(script);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">this</span>.set({
+        txidbuf: txidbuf,
+        txoutnum: txoutnum,
+        scriptvi: scriptvi,
+        script: script,
+        seqnum: seqnum
+      });
+    }
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf)) {
+    <span class="hljs-keyword">var</span> txinbuf = txidbuf;
+    <span class="hljs-keyword">this</span>.fromBuffer(txinbuf);
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (txidbuf) {
     <span class="hljs-keyword">var</span> obj = txidbuf;
     <span class="hljs-keyword">this</span>.set(obj);
@@ -26,6 +42,12 @@ Txin.prototype.set = <span class="hljs-function"><span class="hljs-keyword">func
   <span class="hljs-keyword">this</span>.scriptvi = <span class="hljs-keyword">typeof</span> obj.scriptvi !== <span class="hljs-string">'undefined'</span> ? obj.scriptvi : <span class="hljs-keyword">this</span>.scriptvi;
   <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
   <span class="hljs-keyword">this</span>.seqnum = <span class="hljs-keyword">typeof</span> obj.seqnum !== <span class="hljs-string">'undefined'</span> ? obj.seqnum : <span class="hljs-keyword">this</span>.seqnum;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txin.prototype.setScript = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(script)</span> {</span>
+  <span class="hljs-keyword">this</span>.scriptvi = Varint(script.toBuffer().length);
+  <span class="hljs-keyword">this</span>.script = script;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 

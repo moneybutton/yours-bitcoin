@@ -92,6 +92,67 @@ BN.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">f
   }
 
   <span class="hljs-keyword">return</span> buf;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>signed magnitude buffer
+most significant bit represents sign (0 = positive, -1 = negative)</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromSM = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, opts)</span> {</span>
+  <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">0</span>)
+    <span class="hljs-keyword">this</span>.fromBuffer(<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>]));
+
+  <span class="hljs-keyword">var</span> endian = <span class="hljs-string">'big'</span>;
+  <span class="hljs-keyword">if</span> (opts)
+    endian = opts.endian;
+
+  <span class="hljs-keyword">if</span> (endian == <span class="hljs-string">'little'</span>)
+    buf = reversebuf(buf);
+
+  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x80</span>) {
+    buf[<span class="hljs-number">0</span>] = buf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x7f</span>;
+    <span class="hljs-keyword">this</span>.fromBuffer(buf);
+    <span class="hljs-keyword">this</span>.neg().copy(<span class="hljs-keyword">this</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">this</span>.fromBuffer(buf);
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+BN.prototype.toSM = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(opts)</span> {</span>
+  <span class="hljs-keyword">var</span> endian = <span class="hljs-string">'big'</span>;
+  <span class="hljs-keyword">if</span> (opts)
+    endian = opts.endian;
+
+  <span class="hljs-keyword">var</span> buf;
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.cmp(<span class="hljs-number">0</span>) == -<span class="hljs-number">1</span>) {
+    buf = <span class="hljs-keyword">this</span>.neg().toBuffer();
+    <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x80</span>)
+      buf = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x80</span>]), buf]);
+    <span class="hljs-keyword">else</span>
+      buf[<span class="hljs-number">0</span>] = buf[<span class="hljs-number">0</span>] | <span class="hljs-number">0x80</span>;
+  } <span class="hljs-keyword">else</span> {
+    buf = <span class="hljs-keyword">this</span>.toBuffer();
+    <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] &amp; <span class="hljs-number">0x80</span>)
+      buf = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0x00</span>]), buf]);
+  }
+
+  <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">1</span> &amp; buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0</span>)
+    buf = <span class="hljs-keyword">new</span> Buffer([]);
+
+  <span class="hljs-keyword">if</span> (endian == <span class="hljs-string">'little'</span>)
+    buf = reversebuf(buf);
+
+  <span class="hljs-keyword">return</span> buf;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>This is analogous to the constructor for CScriptNum in bitcoind. Many ops in
+bitcoind&#39;s script interpreter use CScriptNum, which is not really a proper
+bignum. Instead, an error is thrown if trying to input a number bigger than
+4 bytes. We copy that behavior here.</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromCScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">var</span> nMaxNumSize = <span class="hljs-number">4</span>;
+  <span class="hljs-keyword">if</span> (buf.length &gt; nMaxNumSize)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'script number overflow'</span>);
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromSM(buf, {endian: <span class="hljs-string">'little'</span>});
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The corollary to the above, with the notable exception that we do not throw
+an error if the output is larger than four bytes. (Which can happen if
+performing a numerical operation that results in an overflow to more than 4
+bytes).</p></div></div><div class="code"><div class="wrapper">BN.prototype.toCScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toSM({endian: <span class="hljs-string">'little'</span>});
 };
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">decorate</span><span class="hljs-params">(name)</span> {</span>
