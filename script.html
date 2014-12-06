@@ -43,14 +43,14 @@ Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyw
     <span class="hljs-keyword">var</span> opcodenum = br.readUInt8();
 
     <span class="hljs-keyword">var</span> len, buf;
-    <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+    <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.OP_PUSHDATA1) {
       len = opcodenum;
       <span class="hljs-keyword">this</span>.chunks.push({
         buf: br.read(len),
         len: len,
         opcodenum: opcodenum
       });
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA1) {
       len = br.readUInt8();
       <span class="hljs-keyword">var</span> buf = br.read(len);
       <span class="hljs-keyword">this</span>.chunks.push({
@@ -58,7 +58,7 @@ Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyw
         len: len,
         opcodenum: opcodenum
       });
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA2) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA2) {
       len = br.readUInt16LE();
       buf = br.read(len);
       <span class="hljs-keyword">this</span>.chunks.push({
@@ -66,7 +66,7 @@ Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyw
         len: len,
         opcodenum: opcodenum
       });
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA4) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA4) {
       len = br.readUInt32LE();
       buf = br.read(len);
       <span class="hljs-keyword">this</span>.chunks.push({
@@ -92,18 +92,18 @@ Script.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keywor
     <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
     bw.writeUInt8(opcodenum);
     <span class="hljs-keyword">if</span> (chunk.buf) {
-      <span class="hljs-keyword">if</span> (opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+      <span class="hljs-keyword">if</span> (opcodenum &lt; Opcode.OP_PUSHDATA1) {
         bw.write(chunk.buf);
       }
-      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1) {
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA1) {
         bw.writeUInt8(chunk.len);
         bw.write(chunk.buf);
       }
-      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA2) {
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA2) {
         bw.writeUInt16LE(chunk.len);
         bw.write(chunk.buf);
       }
-      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA4) {
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA4) {
         bw.writeUInt32LE(chunk.len);
         bw.write(chunk.buf);
       }
@@ -127,7 +127,7 @@ Script.prototype.fromString = <span class="hljs-function"><span class="hljs-keyw
 
     <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opcodenum === <span class="hljs-string">'undefined'</span>) {
       opcodenum = <span class="hljs-built_in">parseInt</span>(token);
-      <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.map.OP_PUSHDATA1) {
+      <span class="hljs-keyword">if</span> (opcodenum &gt; <span class="hljs-number">0</span> &amp;&amp; opcodenum &lt; Opcode.OP_PUSHDATA1) {
         <span class="hljs-keyword">this</span>.chunks.push({
           buf: <span class="hljs-keyword">new</span> Buffer(tokens[i + <span class="hljs-number">1</span>].slice(<span class="hljs-number">2</span>), <span class="hljs-string">'hex'</span>),
           len: opcodenum,
@@ -142,7 +142,7 @@ Script.prototype.fromString = <span class="hljs-function"><span class="hljs-keyw
       } <span class="hljs-keyword">else</span> {
         <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid script'</span>);
       }
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1 || opcodenum === Opcode.map.OP_PUSHDATA2 || opcodenum === Opcode.map.OP_PUSHDATA4) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA1 || opcodenum === Opcode.OP_PUSHDATA2 || opcodenum === Opcode.OP_PUSHDATA4) {
       <span class="hljs-keyword">if</span> (tokens[i + <span class="hljs-number">2</span>].slice(<span class="hljs-number">0</span>, <span class="hljs-number">2</span>) != <span class="hljs-string">'0x'</span>)
         <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Pushdata data must start with 0x'</span>);
       <span class="hljs-keyword">this</span>.chunks.push({
@@ -168,12 +168,12 @@ Script.prototype.toString = <span class="hljs-function"><span class="hljs-keywor
     <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
     <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
     <span class="hljs-keyword">if</span> (!chunk.buf) {
-      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode.reverseMap[opcodenum] !== <span class="hljs-string">'undefined'</span>)
+      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode.str[opcodenum] !== <span class="hljs-string">'undefined'</span>)
         str = str + <span class="hljs-string">" "</span> + Opcode(opcodenum).toString();
       <span class="hljs-keyword">else</span>
         str = str + <span class="hljs-string">" "</span> + <span class="hljs-string">"0x"</span> + opcodenum.toString(<span class="hljs-number">16</span>);
     } <span class="hljs-keyword">else</span> {
-      <span class="hljs-keyword">if</span> (opcodenum === Opcode.map.OP_PUSHDATA1 || opcodenum === Opcode.map.OP_PUSHDATA2 || opcodenum === Opcode.map.OP_PUSHDATA4)
+      <span class="hljs-keyword">if</span> (opcodenum === Opcode.OP_PUSHDATA1 || opcodenum === Opcode.OP_PUSHDATA2 || opcodenum === Opcode.OP_PUSHDATA4)
         str = str + <span class="hljs-string">" "</span> + Opcode(opcodenum).toString();
       str = str + <span class="hljs-string">" "</span> + chunk.len;
       str = str + <span class="hljs-string">" "</span> + <span class="hljs-string">"0x"</span> + chunk.buf.toString(<span class="hljs-string">'hex'</span>);
@@ -199,9 +199,9 @@ Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="h
       <span class="hljs-keyword">var</span> cbuf = <span class="hljs-keyword">new</span> Buffer(tstr);
       <span class="hljs-keyword">var</span> tbuf = Script().writeBuffer(cbuf).toBuffer();
       bw.write(tbuf);
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode.map[<span class="hljs-string">'OP_'</span> + token] !== <span class="hljs-string">'undefined'</span>) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode[<span class="hljs-string">'OP_'</span> + token] !== <span class="hljs-string">'undefined'</span>) {
       <span class="hljs-keyword">var</span> opstr = <span class="hljs-string">"OP_"</span> + token;
-      <span class="hljs-keyword">var</span> opcodenum = Opcode.map[opstr];
+      <span class="hljs-keyword">var</span> opcodenum = Opcode[opstr];
       bw.writeUInt8(opcodenum);
     } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isNaN</span>(<span class="hljs-built_in">parseInt</span>(token))) {
       <span class="hljs-keyword">var</span> bn = BN(token);
@@ -225,7 +225,7 @@ Script.prototype.toBitcoindString = <span class="hljs-function"><span class="hlj
       <span class="hljs-keyword">var</span> buf = Script({chunks: [chunk]}).toBuffer();
       <span class="hljs-keyword">var</span> hex = buf.toString(<span class="hljs-string">'hex'</span>);
       str = str + <span class="hljs-string">" "</span> + <span class="hljs-string">"0x"</span> + hex;
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode.reverseMap[chunk.opcodenum] !== <span class="hljs-string">'undefined'</span>) {
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode.str[chunk.opcodenum] !== <span class="hljs-string">'undefined'</span>) {
       <span class="hljs-keyword">var</span> ostr = Opcode(chunk.opcodenum).toString();
       str = str + <span class="hljs-string">" "</span> + ostr.slice(<span class="hljs-number">3</span>); <span class="hljs-comment">//remove OP_</span>
     } <span class="hljs-keyword">else</span> {
@@ -238,7 +238,7 @@ Script.prototype.toBitcoindString = <span class="hljs-function"><span class="hlj
 Script.prototype.removeCodeseparators = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> chunks = [];
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[i].opcodenum !== Opcode.map.OP_CODESEPARATOR) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[i].opcodenum !== Opcode.OP_CODESEPARATOR) {
       chunks.push(<span class="hljs-keyword">this</span>.chunks[i]);
     }
   }
@@ -246,8 +246,18 @@ Script.prototype.removeCodeseparators = <span class="hljs-function"><span class=
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
+Script.prototype.isPushOnly = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
+    <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
+    <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
+    <span class="hljs-keyword">if</span> (opcodenum &gt; Opcode.OP_16)
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+};
+
 Script.prototype.isOpReturn = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].opcodenum === Opcode(<span class="hljs-string">'OP_RETURN'</span>).toNumber()
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].opcodenum === Opcode.OP_RETURN
     &amp;&amp;
     (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">1</span>
     ||
@@ -262,11 +272,11 @@ Script.prototype.isOpReturn = <span class="hljs-function"><span class="hljs-keyw
 };
 
 Script.prototype.isPubkeyhashOut = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].opcodenum === Opcode(<span class="hljs-string">'OP_DUP'</span>).toNumber()
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].opcodenum === Opcode(<span class="hljs-string">'OP_HASH160'</span>).toNumber()
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].opcodenum === Opcode.OP_DUP
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].opcodenum === Opcode.OP_HASH160
     &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">2</span>].buf
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">3</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">3</span>].opcodenum === Opcode(<span class="hljs-string">'OP_EQUALVERIFY'</span>).toNumber()
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">4</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">4</span>].opcodenum === Opcode(<span class="hljs-string">'OP_CHECKSIG'</span>).toNumber()) {
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">3</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">3</span>].opcodenum === Opcode.OP_EQUALVERIFY
+    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">4</span>] &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">4</span>].opcodenum === Opcode.OP_CHECKSIG) {
     <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
   } <span class="hljs-keyword">else</span> {
     <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
@@ -284,15 +294,11 @@ Script.prototype.isPubkeyhashIn = <span class="hljs-function"><span class="hljs-
 };
 
 Script.prototype.isScripthashOut = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks.length === <span class="hljs-number">3</span>
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">0</span>].opcodenum === Opcode(<span class="hljs-string">'OP_HASH160'</span>).toNumber()
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">1</span>].buf.length === <span class="hljs-number">20</span>
-    &amp;&amp; <span class="hljs-keyword">this</span>.chunks[<span class="hljs-number">2</span>].opcodenum === Opcode(<span class="hljs-string">'OP_EQUAL'</span>).toNumber()) {
-    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
-  } <span class="hljs-keyword">else</span> {
-    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
-  }
+  <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.toBuffer();
+  <span class="hljs-keyword">return</span> (buf.length === <span class="hljs-number">23</span> &amp;&amp;
+          buf[<span class="hljs-number">0</span>] == Opcode.OP_HASH160 &amp;&amp;
+          buf[<span class="hljs-number">1</span>] == <span class="hljs-number">0x14</span> &amp;&amp;
+          buf[<span class="hljs-number">22</span>] == Opcode.OP_EQUAL);
 };
 
 <span class="hljs-comment">//note that these are frequently indistinguishable from pubkeyhashin</span>
@@ -340,17 +346,17 @@ Script.prototype.writeOp = <span class="hljs-function"><span class="hljs-keyword
 <span class="hljs-comment">//write a big number in the minimal way</span>
 Script.prototype.writeBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
   <span class="hljs-keyword">var</span> opcodenum;
-  <span class="hljs-keyword">if</span> (bn.cmp(<span class="hljs-number">0</span>) === Opcode.map.OP_0) {
+  <span class="hljs-keyword">if</span> (bn.cmp(<span class="hljs-number">0</span>) === Opcode.OP_0) {
     <span class="hljs-keyword">this</span>.chunks.push({
-      opcodenum: Opcode.map.OP_0
+      opcodenum: Opcode.OP_0
     });
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (bn.cmp(-<span class="hljs-number">1</span>) === <span class="hljs-number">0</span>) {
     <span class="hljs-keyword">this</span>.chunks.push({
-      opcodenum: Opcode.map.OP_1NEGATE
+      opcodenum: Opcode.OP_1NEGATE
     });
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (bn.cmp(<span class="hljs-number">1</span>) &gt;= <span class="hljs-number">0</span> &amp;&amp; bn.cmp(<span class="hljs-number">16</span>) &lt;= <span class="hljs-number">0</span>) { <span class="hljs-comment">// see OP_1 - OP_16</span>
     <span class="hljs-keyword">this</span>.chunks.push({
-      opcodenum: bn.toNumber() + Opcode.map.OP_1 - <span class="hljs-number">1</span>
+      opcodenum: bn.toNumber() + Opcode.OP_1 - <span class="hljs-number">1</span>
     });
   } <span class="hljs-keyword">else</span> {
     <span class="hljs-keyword">var</span> buf = bn.toSM({endian: <span class="hljs-string">'little'</span>});
@@ -364,16 +370,16 @@ Script.prototype.writeBN = <span class="hljs-function"><span class="hljs-keyword
 Script.prototype.writeBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">var</span> opcodenum;
   <span class="hljs-keyword">var</span> len = buf.length;
-  <span class="hljs-keyword">if</span> (buf.length &gt; <span class="hljs-number">0</span> &amp;&amp; buf.length &lt; Opcode.map.OP_PUSHDATA1) {
+  <span class="hljs-keyword">if</span> (buf.length &gt; <span class="hljs-number">0</span> &amp;&amp; buf.length &lt; Opcode.OP_PUSHDATA1) {
     opcodenum = buf.length;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">0</span>) {
-    opcodenum = Opcode.map.OP_0;
+    opcodenum = Opcode.OP_0;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">8</span>)) {
-    opcodenum = Opcode.map.OP_PUSHDATA1;
+    opcodenum = Opcode.OP_PUSHDATA1;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">16</span>)) {
-    opcodenum = Opcode.map.OP_PUSHDATA2;
+    opcodenum = Opcode.OP_PUSHDATA2;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>, <span class="hljs-number">32</span>)) {
-    opcodenum = Opcode.map.OP_PUSHDATA4;
+    opcodenum = Opcode.OP_PUSHDATA4;
   } <span class="hljs-keyword">else</span> {
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"You can't push that much data"</span>);
   }
@@ -390,12 +396,12 @@ comes from bitcoind&#39;s script interpreter CheckMinimalPush function</p></div>
   <span class="hljs-keyword">var</span> opcodenum = chunk.opcodenum;
   <span class="hljs-keyword">if</span> (!buf)
     <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
-  <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">0</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_0.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.map.OP_0;
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] &gt;= <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] &lt;= <span class="hljs-number">16</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_1 .. OP_16.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.map.OP_1 + (buf[<span class="hljs-number">0</span>] - <span class="hljs-number">1</span>);
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x81</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_1NEGATE.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.map.OP_1NEGATE;
+  <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">0</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_0.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.OP_0;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] &gt;= <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] &lt;= <span class="hljs-number">16</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_1 .. OP_16.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.OP_1 + (buf[<span class="hljs-number">0</span>] - <span class="hljs-number">1</span>);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length == <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x81</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_1NEGATE.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.OP_1NEGATE;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt;= <span class="hljs-number">75</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used a direct push (opcode indicating number of bytes pushed + those bytes).</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == buf.length;
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt;= <span class="hljs-number">255</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_PUSHDATA.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.map.OP_PUSHDATA1;
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt;= <span class="hljs-number">65535</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_PUSHDATA2.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.map.OP_PUSHDATA2;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt;= <span class="hljs-number">255</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_PUSHDATA.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.OP_PUSHDATA1;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf.length &lt;= <span class="hljs-number">65535</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Could have used OP_PUSHDATA2.</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> opcodenum == Opcode.OP_PUSHDATA2;
   }
   <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
 };

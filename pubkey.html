@@ -38,12 +38,18 @@ Pubkey.prototype.fromPrivkey = <span class="hljs-function"><span class="hljs-key
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-Pubkey.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromDER(buf);
-};
-
-Pubkey.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x04</span>) {
+Pubkey.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, strict)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromDER(buf, strict);
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>In order to mimic the non-strict style of OpenSSL, set strict = false. For
+information and what prefixes 0x06 and 0x07 mean, in addition to the normal
+compressed and uncompressed public keys, see the message by Peter Wuille
+where he discovered these &quot;hybrid pubkeys&quot; on the mailing list:
+<a href="http://sourceforge.net/p/bitcoin/mailman/message/29416133/">http://sourceforge.net/p/bitcoin/mailman/message/29416133/</a></p></div></div><div class="code"><div class="wrapper">Pubkey.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, strict)</span> {</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> strict === <span class="hljs-string">'undefined'</span>)
+    strict = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">else</span>
+    strict = <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x04</span> || (!strict &amp;&amp; (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x06</span> || buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x07</span>))) {
     <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>, <span class="hljs-number">33</span>);
     <span class="hljs-keyword">var</span> ybuf = buf.slice(<span class="hljs-number">33</span>, <span class="hljs-number">65</span>);
     <span class="hljs-keyword">if</span> (xbuf.length !== <span class="hljs-number">32</span> || ybuf.length !== <span class="hljs-number">32</span> || buf.length !== <span class="hljs-number">65</span>)
@@ -52,12 +58,12 @@ Pubkey.prototype.fromDER = <span class="hljs-function"><span class="hljs-keyword
     <span class="hljs-keyword">var</span> y = bn(ybuf);
     <span class="hljs-keyword">this</span>.point = Point(x, y);
     <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">false</span>;
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x03</span>) {
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x03</span>) {
     <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>);
     <span class="hljs-keyword">var</span> x = bn(xbuf);
     <span class="hljs-keyword">this</span>.fromX(<span class="hljs-literal">true</span>, x);
     <span class="hljs-keyword">this</span>.compressed = <span class="hljs-literal">true</span>;
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] == <span class="hljs-number">0x02</span>) {
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x02</span>) {
     <span class="hljs-keyword">var</span> xbuf = buf.slice(<span class="hljs-number">1</span>);
     <span class="hljs-keyword">var</span> x = bn(xbuf);
     <span class="hljs-keyword">this</span>.fromX(<span class="hljs-literal">false</span>, x);
@@ -110,7 +116,17 @@ Pubkey.prototype.toDER = <span class="hljs-function"><span class="hljs-keyword">
 Pubkey.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> compressed = <span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed === <span class="hljs-string">'undefined'</span> ? <span class="hljs-literal">true</span> : <span class="hljs-keyword">this</span>.compressed;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toDER(compressed).toString(<span class="hljs-string">'hex'</span>);
-};
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Translated from bitcoind&#39;s IsCompressedOrUncompressedPubKey</p></div></div><div class="code"><div class="wrapper">Pubkey.isCompressedOrUncompressed = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (buf.length &lt; <span class="hljs-number">33</span>) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p> Non-canonical public key: too short</p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+  <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x04</span>) {
+    <span class="hljs-keyword">if</span> (buf.length !== <span class="hljs-number">65</span>)</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p> Non-canonical public key: invalid length for uncompressed key</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x02</span> || buf[<span class="hljs-number">0</span>] === <span class="hljs-number">0x03</span>) {
+    <span class="hljs-keyword">if</span> (buf.length !== <span class="hljs-number">33</span>)</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p> Non-canonical public key: invalid length for compressed key</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  } <span class="hljs-keyword">else</span> {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p> Non-canonical public key: neither compressed nor uncompressed</p></div></div><div class="code"><div class="wrapper">      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}
 
 <span class="hljs-comment">//https://www.iacr.org/archive/pkc2003/25670211/25670211.pdf</span>
 Pubkey.prototype.validate = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>

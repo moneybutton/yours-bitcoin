@@ -6,7 +6,7 @@
     <span class="hljs-keyword">this</span>.num = num;
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> num === <span class="hljs-string">'string'</span>) {
     <span class="hljs-keyword">var</span> str = num;
-    <span class="hljs-keyword">this</span>.num = Opcode.map[str];
+    <span class="hljs-keyword">this</span>.num = map[str];
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (num) {
     <span class="hljs-keyword">var</span> obj = num;
     <span class="hljs-keyword">this</span>.set(obj);
@@ -28,7 +28,7 @@ Opcode.prototype.toNumber = <span class="hljs-function"><span class="hljs-keywor
 };
 
 Opcode.prototype.fromString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
-  <span class="hljs-keyword">var</span> num = Opcode.map[str];
+  <span class="hljs-keyword">var</span> num = map[str];
   <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> num === <span class="hljs-string">'undefined'</span>)
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Invalid opcodestr'</span>);
   <span class="hljs-keyword">this</span>.num = num;
@@ -36,7 +36,7 @@ Opcode.prototype.fromString = <span class="hljs-function"><span class="hljs-keyw
 };
 
 Opcode.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">var</span> str = Opcode.reverseMap[<span class="hljs-keyword">this</span>.num];
+  <span class="hljs-keyword">var</span> str = Opcode.str[<span class="hljs-keyword">this</span>.num];
   <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> str === <span class="hljs-string">'undefined'</span>) {
     console.log(<span class="hljs-string">'opcodenum: '</span> + <span class="hljs-keyword">this</span>.num);
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Opcode does not have a string representation'</span>);
@@ -44,7 +44,7 @@ Opcode.prototype.toString = <span class="hljs-function"><span class="hljs-keywor
   <span class="hljs-keyword">return</span> str;
 };
 
-Opcode.map = {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>push value</p></div></div><div class="code"><div class="wrapper">  OP_FALSE: <span class="hljs-number">0x00</span>,
+<span class="hljs-keyword">var</span> map = {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>push value</p></div></div><div class="code"><div class="wrapper">  OP_FALSE: <span class="hljs-number">0x00</span>,
   OP_0: <span class="hljs-number">0x00</span>,
   OP_PUSHDATA1: <span class="hljs-number">0x4c</span>,
   OP_PUSHDATA2: <span class="hljs-number">0x4d</span>,
@@ -161,11 +161,12 @@ Opcode.map = {</div></div></div><div class="segment"><div class="comments "><div
   OP_INVALIDOPCODE: <span class="hljs-number">0xff</span>
 };
 
-Opcode.reverseMap = [];
+Opcode.str = {}
 
-<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> Opcode.map) {
-  <span class="hljs-keyword">if</span> (Opcode.map.hasOwnProperty(k)) {
-    Opcode.reverseMap[Opcode.map[k]] = k;
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> map) {
+  Opcode[k] = map[k];
+  <span class="hljs-keyword">if</span> (map.hasOwnProperty(k)) {
+    Opcode.str[map[k]] = k;
   }
 }
 
