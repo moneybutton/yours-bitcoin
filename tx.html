@@ -1,11 +1,12 @@
-<!DOCTYPE html><html lang="en"><head><title>tx</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="tx"><meta name="groc-project-path" content="lib/tx.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/tx.js">lib/tx.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Txin = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./txin'</span>);
+<!DOCTYPE html><html lang="en"><head><title>tx</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="tx"><meta name="groc-project-path" content="lib/tx.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/tx.js">lib/tx.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="transaction">Transaction</h1>
+<p>A bitcoin transaction.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Txin = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./txin'</span>);
 <span class="hljs-keyword">var</span> Txout = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./txout'</span>);
-<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
-<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufW = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufw'</span>);
+<span class="hljs-keyword">var</span> BufR = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufr'</span>);
 <span class="hljs-keyword">var</span> Varint = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./varint'</span>);
 <span class="hljs-keyword">var</span> Hash = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./hash'</span>);
 <span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
-<span class="hljs-keyword">var</span> Signature = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./signature'</span>);
+<span class="hljs-keyword">var</span> Sig = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./sig'</span>);
 <span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 <span class="hljs-keyword">var</span> ECDSA = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./ecdsa'</span>);
 
@@ -34,6 +35,8 @@
     <span class="hljs-keyword">this</span>.initialize();
   }
 };
+
+Tx.MAX_MONEY = <span class="hljs-number">21000000</span> * <span class="hljs-number">1e8</span>;
 
 Tx.prototype.initialize = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">this</span>.version = <span class="hljs-number">1</span>;
@@ -95,42 +98,42 @@ Tx.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">fun
 };
 
 Tx.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufR(BufR(buf));
 };
 
-Tx.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+Tx.prototype.fromBufR = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
   <span class="hljs-keyword">this</span>.version = br.readUInt32LE();
   <span class="hljs-keyword">this</span>.txinsvi = Varint(br.readVarintBuf());
   <span class="hljs-keyword">var</span> txinsnum = <span class="hljs-keyword">this</span>.txinsvi.toNumber();
   <span class="hljs-keyword">this</span>.txins = [];
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; txinsnum; i++) {
-    <span class="hljs-keyword">this</span>.txins.push(Txin().fromBufferReader(br));
+    <span class="hljs-keyword">this</span>.txins.push(Txin().fromBufR(br));
   }
   <span class="hljs-keyword">this</span>.txoutsvi = Varint(br.readVarintBuf());
   <span class="hljs-keyword">var</span> txoutsnum = <span class="hljs-keyword">this</span>.txoutsvi.toNumber();
   <span class="hljs-keyword">this</span>.txouts = [];
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; txoutsnum; i++) {
-    <span class="hljs-keyword">this</span>.txouts.push(Txout().fromBufferReader(br));
+    <span class="hljs-keyword">this</span>.txouts.push(Txout().fromBufR(br));
   }
   <span class="hljs-keyword">this</span>.nlocktime = br.readUInt32LE();
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
 Tx.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter().concat();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufW().concat();
 };
 
-Tx.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+Tx.prototype.toBufW = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
   <span class="hljs-keyword">if</span> (!bw)
-    bw = <span class="hljs-keyword">new</span> BufferWriter();
+    bw = <span class="hljs-keyword">new</span> BufW();
   bw.writeUInt32LE(<span class="hljs-keyword">this</span>.version);
   bw.write(<span class="hljs-keyword">this</span>.txinsvi.buf);
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.txins.length; i++) {
-    <span class="hljs-keyword">this</span>.txins[i].toBufferWriter(bw);
+    <span class="hljs-keyword">this</span>.txins[i].toBufW(bw);
   }
   bw.write(<span class="hljs-keyword">this</span>.txoutsvi.buf)
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.txouts.length; i++) {
-    <span class="hljs-keyword">this</span>.txouts[i].toBufferWriter(bw);
+    <span class="hljs-keyword">this</span>.txouts[i].toBufW(bw);
   }
   bw.writeUInt32LE(<span class="hljs-keyword">this</span>.nlocktime);
   <span class="hljs-keyword">return</span> bw;
@@ -148,7 +151,7 @@ Tx.prototype.sighash = <span class="hljs-function"><span class="hljs-keyword">fu
   
   txcopy.txins[nin] = Txin(txcopy.txins[nin].toBuffer()).setScript(subscript);
 
-  <span class="hljs-keyword">if</span> ((nhashtype &amp; <span class="hljs-number">31</span>) === Signature.SIGHASH_NONE) {
+  <span class="hljs-keyword">if</span> ((nhashtype &amp; <span class="hljs-number">31</span>) === Sig.SIGHASH_NONE) {
     txcopy.txouts.length = <span class="hljs-number">0</span>;
     txcopy.txoutsvi = Varint(<span class="hljs-number">0</span>);
 
@@ -156,7 +159,7 @@ Tx.prototype.sighash = <span class="hljs-function"><span class="hljs-keyword">fu
       <span class="hljs-keyword">if</span> (i !== nin)
         txcopy.txins[i].seqnum = <span class="hljs-number">0</span>;
     }
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((nhashtype &amp; <span class="hljs-number">31</span>) === Signature.SIGHASH_SINGLE) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The SIGHASH_SINGLE bug.
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((nhashtype &amp; <span class="hljs-number">31</span>) === Sig.SIGHASH_SINGLE) {</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The SIGHASH_SINGLE bug.
 <a href="https://bitcointalk.org/index.php?topic=260595.0">https://bitcointalk.org/index.php?topic=260595.0</a></p></div></div><div class="code"><div class="wrapper">    <span class="hljs-keyword">if</span> (nin &gt; txcopy.txouts.length - <span class="hljs-number">1</span>)
       <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'0000000000000000000000000000000000000000000000000000000000000001'</span>, <span class="hljs-string">'hex'</span>);
 
@@ -175,14 +178,14 @@ Tx.prototype.sighash = <span class="hljs-function"><span class="hljs-keyword">fu
   }
   <span class="hljs-comment">//else, SIGHASH_ALL</span>
 
-  <span class="hljs-keyword">if</span> (nhashtype &amp; Signature.SIGHASH_ANYONECANPAY) {
+  <span class="hljs-keyword">if</span> (nhashtype &amp; Sig.SIGHASH_ANYONECANPAY) {
     txcopy.txins[<span class="hljs-number">0</span>] = txcopy.txins[nin];
     txcopy.txins.length = <span class="hljs-number">1</span>;
     txcopy.txinsvi = Varint(<span class="hljs-number">1</span>);
   }
 
-  <span class="hljs-keyword">var</span> buf = BufferWriter().write(txcopy.toBuffer()).writeInt32LE(nhashtype).concat();
-  <span class="hljs-keyword">return</span> BufferReader(Hash.sha256sha256(buf)).readReverse();
+  <span class="hljs-keyword">var</span> buf = BufW().write(txcopy.toBuffer()).writeInt32LE(nhashtype).concat();
+  <span class="hljs-keyword">return</span> BufR(Hash.sha256sha256(buf)).readReverse();
 };</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>This function returns a signature but does not update any inputs</p></div></div><div class="code"><div class="wrapper">Tx.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(keypair, nhashtype, nin, subscript)</span> {</span>
   <span class="hljs-keyword">var</span> hashbuf = <span class="hljs-keyword">this</span>.sighash(nhashtype, nin, subscript);
   <span class="hljs-keyword">var</span> sig = ECDSA.sign(hashbuf, keypair, <span class="hljs-string">'little'</span>).set({nhashtype: nhashtype});
@@ -197,19 +200,31 @@ Tx.prototype.hash = <span class="hljs-function"><span class="hljs-keyword">funct
 };
 
 Tx.prototype.id = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">return</span> BufferReader(<span class="hljs-keyword">this</span>.hash()).readReverse();
+  <span class="hljs-keyword">return</span> BufR(<span class="hljs-keyword">this</span>.hash()).readReverse();
 };
 
-Tx.prototype.addTxin = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(txin)</span> {</span>
+Tx.prototype.addTxin = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(txhashbuf, txoutnum, script, seqnum)</span> {</span>
+  <span class="hljs-keyword">var</span> txin;
+  <span class="hljs-keyword">if</span> (txhashbuf <span class="hljs-keyword">instanceof</span> Txin)
+    txin = txhashbuf;
+  <span class="hljs-keyword">else</span>
+    txin = Txin(txhashbuf, txoutnum, script, seqnum);
   <span class="hljs-keyword">this</span>.txins.push(txin);
   <span class="hljs-keyword">this</span>.txinsvi = Varint(<span class="hljs-keyword">this</span>.txinsvi.toNumber() + <span class="hljs-number">1</span>);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-Tx.prototype.addTxout = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(txout)</span> {</span>
+Tx.prototype.addTxout = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(valuebn, script)</span> {</span>
+  <span class="hljs-keyword">var</span> txout;
+  <span class="hljs-keyword">if</span> (valuebn <span class="hljs-keyword">instanceof</span> Txout)
+    txout = valuebn;
+  <span class="hljs-keyword">else</span>
+    txout = Txout(valuebn, script);
   <span class="hljs-keyword">this</span>.txouts.push(txout);
   <span class="hljs-keyword">this</span>.txoutsvi = Varint(<span class="hljs-keyword">this</span>.txoutsvi.toNumber() + <span class="hljs-number">1</span>);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-};
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Analagous to bitcoind&#39;s IsCoinBase function in transaction.h</p></div></div><div class="code"><div class="wrapper">Tx.prototype.isCoinbase = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">return</span> (<span class="hljs-keyword">this</span>.txins.length === <span class="hljs-number">1</span> &amp;&amp; <span class="hljs-keyword">this</span>.txins[<span class="hljs-number">0</span>].hasNullInput());
+}
 
 module.exports = Tx;</div></div></div></div></body></html>

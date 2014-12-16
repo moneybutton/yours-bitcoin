@@ -2,8 +2,8 @@
 <span class="hljs-keyword">var</span> Base58check = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../base58check'</span>);
 <span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../pubkey'</span>);
 <span class="hljs-keyword">var</span> KDF = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../kdf'</span>);
-<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufferwriter'</span>);
-<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufferreader'</span>);
+<span class="hljs-keyword">var</span> BufW = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufw'</span>);
+<span class="hljs-keyword">var</span> BufR = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../bufr'</span>);
 
 <span class="hljs-keyword">var</span> SAddress = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">SAddress</span><span class="hljs-params">(addrstr)</span> {</span>
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> SAddress))
@@ -92,7 +92,7 @@ SAddress.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyw
     <span class="hljs-keyword">var</span> version = SAddress.testver;
   <span class="hljs-keyword">else</span>
     <span class="hljs-keyword">var</span> version = SAddress.mainver;
-  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
   bw.writeUInt8(version);
   bw.writeUInt8(<span class="hljs-number">0</span>); <span class="hljs-comment">//options</span>
   bw.write(<span class="hljs-keyword">this</span>.scanPubkey.toDER(<span class="hljs-literal">true</span>));
@@ -109,7 +109,7 @@ SAddress.prototype.toString = <span class="hljs-function"><span class="hljs-keyw
 };
 
 SAddress.parseDWBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufferReader(buf);
+  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufR(buf);
   <span class="hljs-keyword">var</span> parsed = {};
   parsed.version = br.readUInt8();
   parsed.options = br.readUInt8();

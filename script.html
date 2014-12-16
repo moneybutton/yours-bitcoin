@@ -1,5 +1,15 @@
-<!DOCTYPE html><html lang="en"><head><title>script</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="script"><meta name="groc-project-path" content="lib/script.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/script.js">lib/script.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
-<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<!DOCTYPE html><html lang="en"><head><title>script</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="script"><meta name="groc-project-path" content="lib/script.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/script.js">lib/script.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="script">Script</h1>
+<p>Script is the scripting language built into bitcoin. The Script class lets
+you create an instance of a script, e.g. for a scriptSig or a scriptPubkey.
+It understands both the binary format, as well as two different string
+formats. The default string format, to/fromString, is a custom format only
+used by fullnode because it is isomorphic to the binary format (or as
+isomorphic as it can be ... since OP_0 and OP_FALSE have the same byte
+value, and so do OP_1 and OP_TRUE). The bitcoind string format is also
+support, but that format is not isomorphic (i.e., if you pull in a string
+and then write it again, you are likely to get back a different string, even
+if you don&#39;t use OP_0, OP_FALSE, OP_1, or OP_TRUE).</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufR = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufr'</span>);
+<span class="hljs-keyword">var</span> BufW = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufw'</span>);
 <span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 <span class="hljs-keyword">var</span> Opcode = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./opcode'</span>);
 
@@ -38,7 +48,7 @@ Script.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword"
 Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">this</span>.chunks = [];
 
-  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufferReader(buf);
+  <span class="hljs-keyword">var</span> br = <span class="hljs-keyword">new</span> BufR(buf);
   <span class="hljs-keyword">while</span> (!br.eof()) {
     <span class="hljs-keyword">var</span> opcodenum = br.readUInt8();
 
@@ -85,7 +95,7 @@ Script.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyw
 };
 
 Script.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
 
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
     <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
@@ -185,7 +195,7 @@ Script.prototype.toString = <span class="hljs-function"><span class="hljs-keywor
 
 <span class="hljs-comment">//the script string format used in bitcoind data tests</span>
 Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
-  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+  <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
   <span class="hljs-keyword">var</span> tokens = str.split(<span class="hljs-string">' '</span>);
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; tokens.length; i++) {
     <span class="hljs-keyword">var</span> token = tokens[i];
@@ -201,6 +211,10 @@ Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="h
       bw.write(tbuf);
     } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode[<span class="hljs-string">'OP_'</span> + token] !== <span class="hljs-string">'undefined'</span>) {
       <span class="hljs-keyword">var</span> opstr = <span class="hljs-string">"OP_"</span> + token;
+      <span class="hljs-keyword">var</span> opcodenum = Opcode[opstr];
+      bw.writeUInt8(opcodenum);
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> Opcode[token] === <span class="hljs-string">'number'</span>) {
+      <span class="hljs-keyword">var</span> opstr = token;
       <span class="hljs-keyword">var</span> opcodenum = Opcode[opstr];
       bw.writeUInt8(opcodenum);
     } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isNaN</span>(<span class="hljs-built_in">parseInt</span>(token))) {
@@ -311,11 +325,19 @@ Script.prototype.isScripthashIn = <span class="hljs-function"><span class="hljs-
   } <span class="hljs-keyword">else</span> {
     <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
   }
-};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>find and delete equivalent buf
-used by interpreter</p></div></div><div class="code"><div class="wrapper">Script.prototype.findAndDelete = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Analagous to bitcoind&#39;s FindAndDelete. Find and delete equivalent chunks,
+typically used with push data chunks.  Note that this will find and delete
+not just the same data, but the same data with the same push data op as
+produced by default. i.e., if a pushdata in a tx does not use the minimal
+pushdata op, then when you try to remove the data it is pushing, it will not
+be removed, because they do not use the same pushdata op.</p></div></div><div class="code"><div class="wrapper">Script.prototype.findAndDelete = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(script)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = script.toBuffer();
   <span class="hljs-keyword">var</span> hex = buf.toString(<span class="hljs-string">'hex'</span>);
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.chunks[i].buf &amp;&amp; <span class="hljs-keyword">this</span>.chunks[i].buf.toString(<span class="hljs-string">'hex'</span>) === hex)
+    <span class="hljs-keyword">var</span> script2 = Script({chunks: [<span class="hljs-keyword">this</span>.chunks[i]]});
+    <span class="hljs-keyword">var</span> buf2 = script2.toBuffer();
+    <span class="hljs-keyword">var</span> hex2 = buf2.toString(<span class="hljs-string">'hex'</span>);
+    <span class="hljs-keyword">if</span> (hex === hex2)
       <span class="hljs-keyword">this</span>.chunks.splice(i, <span class="hljs-number">1</span>);
   }
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;

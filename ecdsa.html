@@ -1,6 +1,18 @@
-<!DOCTYPE html><html lang="en"><head><title>ecdsa</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="ecdsa"><meta name="groc-project-path" content="lib/ecdsa.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/ecdsa.js">lib/ecdsa.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<!DOCTYPE html><html lang="en"><head><title>ecdsa</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="ecdsa"><meta name="groc-project-path" content="lib/ecdsa.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/ecdsa.js">lib/ecdsa.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="ecdsa">ECDSA</h1>
+<p>ECDSA is the signature algorithm used by bitcoin. The way you probably want
+to use this is with the static ECDSA.sign( ... ) and ECDSA.verify( ... )
+functions. Note that in bitcoin, the hashbuf is little endian, so if you are
+signing or verifying something that has to do with a transaction, you should
+explicitly plug in that it is little endian as an option to the sign and
+verify functions.</p>
+<p>This implementation of ECDSA uses deterministic signatures as defined in RFC
+6979 as the default, which has become a defacto standard in bitcoin wallets
+due to recurring security issues around using a value of k pulled from a
+possibly faulty entropy pool. If you use the same value of k twice, someone
+can derive your private key. Deterministic k prevents this without needing
+an entropy pool.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 <span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
-<span class="hljs-keyword">var</span> Signature = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./signature'</span>);
+<span class="hljs-keyword">var</span> Sig = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./sig'</span>);
 <span class="hljs-keyword">var</span> Keypair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./keypair'</span>);
 <span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
 <span class="hljs-keyword">var</span> Random = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./random'</span>);
@@ -49,7 +61,7 @@ ECDSA.prototype.fromString = <span class="hljs-function"><span class="hljs-keywo
   <span class="hljs-keyword">if</span> (obj.keypair)
     <span class="hljs-keyword">this</span>.keypair = Keypair().fromString(obj.keypair);
   <span class="hljs-keyword">if</span> (obj.sig)
-    <span class="hljs-keyword">this</span>.sig = Signature().fromString(obj.sig);
+    <span class="hljs-keyword">this</span>.sig = Sig().fromString(obj.sig);
   <span class="hljs-keyword">if</span> (obj.k)
     <span class="hljs-keyword">this</span>.k = BN(obj.k, <span class="hljs-number">10</span>);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
@@ -63,7 +75,17 @@ ECDSA.prototype.randomK = <span class="hljs-function"><span class="hljs-keyword"
   } <span class="hljs-keyword">while</span> (!(k.lt(N) &amp;&amp; k.gt(<span class="hljs-number">0</span>)));
   <span class="hljs-keyword">this</span>.k = k;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p><a href="https://tools.ietf.org/html/rfc6979#section-3.2">https://tools.ietf.org/html/rfc6979#section-3.2</a></p></div></div><div class="code"><div class="wrapper">ECDSA.prototype.deterministicK = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(badrs)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The traditional ECDSA algorithm uses a purely random value of k. This has
+the negative that when signing, your entropy must be good, or the private
+key can be recovered if two signatures use the same value of k. It turns out
+that k does not have to be purely random. It can be deterministic, so long
+as an attacker can&#39;t guess it. RFC 6979 specifies how to do this using a
+combination of the private key and the hash of the thing to be signed. It is
+best practice to use this value, which can be tested for byte-for-byte
+accuracy, and is resistant to a broken RNG. Note that it is actually the
+case that bitcoin private keys have been compromised through that attack.
+Deterministic k is a best practice.</p>
+<p><a href="https://tools.ietf.org/html/rfc6979#section-3.2">https://tools.ietf.org/html/rfc6979#section-3.2</a></p></div></div><div class="code"><div class="wrapper">ECDSA.prototype.deterministicK = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(badrs)</span> {</span>
   <span class="hljs-keyword">var</span> v = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">32</span>);
   v.fill(<span class="hljs-number">0x01</span>);
   <span class="hljs-keyword">var</span> k = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">32</span>);
@@ -117,7 +139,7 @@ Q = r^-1 (sR + -eG)</p></div></div><div class="code"><div class="wrapper">  <spa
   <span class="hljs-keyword">return</span> pubkey;
 };
 
-ECDSA.prototype.sigError = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+ECDSA.prototype.verifystr = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">if</span> (!Buffer.isBuffer(<span class="hljs-keyword">this</span>.hashbuf) || <span class="hljs-keyword">this</span>.hashbuf.length !== <span class="hljs-number">32</span>)
     <span class="hljs-keyword">return</span> <span class="hljs-string">'hashbuf must be a 32 byte buffer'</span>;
 
@@ -180,7 +202,7 @@ ECDSA.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">fu
     s = Point.getN().sub(s);
   }
 
-  <span class="hljs-keyword">this</span>.sig = <span class="hljs-keyword">new</span> Signature({r: r, s: s, compressed: <span class="hljs-keyword">this</span>.keypair.pubkey.compressed});
+  <span class="hljs-keyword">this</span>.sig = <span class="hljs-keyword">new</span> Sig({r: r, s: s, compressed: <span class="hljs-keyword">this</span>.keypair.pubkey.compressed});
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
@@ -203,7 +225,7 @@ ECDSA.prototype.toString = <span class="hljs-function"><span class="hljs-keyword
 };
 
 ECDSA.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.sigError())
+  <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.verifystr())
     <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">true</span>;
   <span class="hljs-keyword">else</span>
     <span class="hljs-keyword">this</span>.verified = <span class="hljs-literal">false</span>;

@@ -1,4 +1,15 @@
-<!DOCTYPE html><html lang="en"><head><title>bn</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bn"><meta name="groc-project-path" content="lib/bn.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bn.js">lib/bn.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> _BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'bn.js'</span>);
+<!DOCTYPE html><html lang="en"><head><title>bn</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bn"><meta name="groc-project-path" content="lib/bn.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bn.js">lib/bn.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="big-number">Big Number</h1>
+<p>Ah, big numbers. One of the elements of cryptography. Since javascript
+numbers are only precise up to about 53 bits, and bitcoin is based on
+cryptography that uses 256 bit numbers, we must use a big number library.
+The library we use at the moment is Fedor Indutny&#39;s bn.js library. Since big
+numbers are extremely useful, we provide some very basic wrappers for his
+big number class and expose it. The wrappers merely allow you to do, say,
+bn.cmp(num) instead of just bn.cmp(bn), which is nice. The primary way to
+use this is bn(str) (where str is base 10) or bn(num) or
+bn().fromBuffer(buf) or bn().fromSM(buf). You can also do little endian,
+which bitcoin likes a lot, with bn().fromBuffer(buf, {endian: &#39;little&#39;}) or
+bn().fromSM(buf, {endian: &#39;little&#39;}).</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> _BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'bn.js'</span>);
 
 <span class="hljs-keyword">var</span> BN = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BN</span><span class="hljs-params">(n, base)</span> {</span>
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BN)) {
@@ -92,8 +103,8 @@ BN.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">f
   }
 
   <span class="hljs-keyword">return</span> buf;
-};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>signed magnitude buffer
-most significant bit represents sign (0 = positive, -1 = negative)</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromSM = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, opts)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Signed magnitude buffer. Most significant bit represents sign (0 = positive,
+1 = negative).</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromSM = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, opts)</span> {</span>
   <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">0</span>)
     <span class="hljs-keyword">this</span>.fromBuffer(<span class="hljs-keyword">new</span> Buffer([<span class="hljs-number">0</span>]));
 
@@ -142,7 +153,7 @@ BN.prototype.toSM = <span class="hljs-function"><span class="hljs-keyword">funct
 };</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>This is analogous to the constructor for CScriptNum in bitcoind. Many ops in
 bitcoind&#39;s script interpreter use CScriptNum, which is not really a proper
 bignum. Instead, an error is thrown if trying to input a number bigger than
-4 bytes. We copy that behavior here.</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromCScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, fRequireMinimal)</span> {</span>
+4 bytes. We copy that behavior here.</p></div></div><div class="code"><div class="wrapper">BN.prototype.fromScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf, fRequireMinimal)</span> {</span>
   <span class="hljs-keyword">var</span> nMaxNumSize = <span class="hljs-number">4</span>;
   <span class="hljs-keyword">if</span> (buf.length &gt; nMaxNumSize)
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'script number overflow'</span>);
@@ -163,7 +174,7 @@ is +-255, which encode to 0xff00 and 0xff80 respectively.
 };</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>The corollary to the above, with the notable exception that we do not throw
 an error if the output is larger than four bytes. (Which can happen if
 performing a numerical operation that results in an overflow to more than 4
-bytes).</p></div></div><div class="code"><div class="wrapper">BN.prototype.toCScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+bytes).</p></div></div><div class="code"><div class="wrapper">BN.prototype.toScriptNumBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toSM({endian: <span class="hljs-string">'little'</span>});
 };
 
@@ -179,12 +190,28 @@ bytes).</p></div></div><div class="code"><div class="wrapper">BN.prototype.toCSc
   BN.prototype[name] = f;
 };
 
+BN.prototype.eq = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) === <span class="hljs-number">0</span>;
+};
+
+BN.prototype.neq = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) !== <span class="hljs-number">0</span>;
+};
+
 BN.prototype.gt = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &gt; <span class="hljs-number">0</span>;
 };
 
+BN.prototype.geq = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &gt;= <span class="hljs-number">0</span>;
+};
+
 BN.prototype.lt = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &lt; <span class="hljs-number">0</span>;
+};
+
+BN.prototype.leq = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(b)</span> {</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cmp(b) &lt;= <span class="hljs-number">0</span>;
 };
 
 decorate(<span class="hljs-string">'add'</span>);
@@ -194,6 +221,8 @@ decorate(<span class="hljs-string">'mod'</span>);
 decorate(<span class="hljs-string">'div'</span>);
 decorate(<span class="hljs-string">'cmp'</span>);
 decorate(<span class="hljs-string">'gt'</span>);
+decorate(<span class="hljs-string">'geq'</span>);
 decorate(<span class="hljs-string">'lt'</span>);
+decorate(<span class="hljs-string">'leq'</span>);
 
 module.exports = BN;</div></div></div></div></body></html>

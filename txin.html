@@ -1,43 +1,47 @@
-<!DOCTYPE html><html lang="en"><head><title>txin</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="txin"><meta name="groc-project-path" content="lib/txin.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/txin.js">lib/txin.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufferReader = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferreader'</span>);
-<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufferwriter'</span>);
+<!DOCTYPE html><html lang="en"><head><title>txin</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="txin"><meta name="groc-project-path" content="lib/txin.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/txin.js">lib/txin.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="transaction-input">Transaction Input</h1>
+<p>An input to a transaction. The way you probably want to use this is through
+the convenient method of Txin(txhashbuf, txoutnum, script, seqnum) (i.e., you
+can leave out the scriptvi, which is computed automatically if you leave it
+out.)</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BufR = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufr'</span>);
+<span class="hljs-keyword">var</span> BufW = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufw'</span>);
 <span class="hljs-keyword">var</span> Varint = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./varint'</span>);
 <span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
 
-<span class="hljs-keyword">var</span> Txin = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Txin</span><span class="hljs-params">(txidbuf, txoutnum, scriptvi, script, seqnum)</span> {</span>
+<span class="hljs-keyword">var</span> Txin = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Txin</span><span class="hljs-params">(txhashbuf, txoutnum, scriptvi, script, seqnum)</span> {</span>
   <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Txin))
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txin(txidbuf, txoutnum, scriptvi, script, seqnum);
-  <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf) &amp;&amp; <span class="hljs-keyword">typeof</span> txoutnum !== <span class="hljs-string">'undefined'</span>) {
-    <span class="hljs-keyword">if</span> (txidbuf.length !== <span class="hljs-number">32</span>)
-      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'txidbuf must be 32 bytes'</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Txin(txhashbuf, txoutnum, scriptvi, script, seqnum);
+  <span class="hljs-keyword">if</span> (Buffer.isBuffer(txhashbuf) &amp;&amp; <span class="hljs-keyword">typeof</span> txoutnum !== <span class="hljs-string">'undefined'</span>) {
+    <span class="hljs-keyword">if</span> (txhashbuf.length !== <span class="hljs-number">32</span>)
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'txhashbuf must be 32 bytes'</span>);
     <span class="hljs-keyword">if</span> (scriptvi <span class="hljs-keyword">instanceof</span> Script) {
       seqnum = script;
       script = scriptvi;
       <span class="hljs-keyword">this</span>.set({
-        txidbuf: txidbuf,
+        txhashbuf: txhashbuf,
         txoutnum: txoutnum,
         seqnum: seqnum
       });
       <span class="hljs-keyword">this</span>.setScript(script);
     } <span class="hljs-keyword">else</span> {
       <span class="hljs-keyword">this</span>.set({
-        txidbuf: txidbuf,
+        txhashbuf: txhashbuf,
         txoutnum: txoutnum,
         scriptvi: scriptvi,
         script: script,
         seqnum: seqnum
       });
     }
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(txidbuf)) {
-    <span class="hljs-keyword">var</span> txinbuf = txidbuf;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Buffer.isBuffer(txhashbuf)) {
+    <span class="hljs-keyword">var</span> txinbuf = txhashbuf;
     <span class="hljs-keyword">this</span>.fromBuffer(txinbuf);
-  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (txidbuf) {
-    <span class="hljs-keyword">var</span> obj = txidbuf;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (txhashbuf) {
+    <span class="hljs-keyword">var</span> obj = txhashbuf;
     <span class="hljs-keyword">this</span>.set(obj);
   }
 };
 
 Txin.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
-  <span class="hljs-keyword">this</span>.txidbuf = obj.txidbuf || <span class="hljs-keyword">this</span>.txidbuf;
+  <span class="hljs-keyword">this</span>.txhashbuf = obj.txhashbuf || <span class="hljs-keyword">this</span>.txhashbuf;
   <span class="hljs-keyword">this</span>.txoutnum = <span class="hljs-keyword">typeof</span> obj.txoutnum !== <span class="hljs-string">'undefined'</span> ? obj.txoutnum : <span class="hljs-keyword">this</span>.txoutnum;
   <span class="hljs-keyword">this</span>.scriptvi = <span class="hljs-keyword">typeof</span> obj.scriptvi !== <span class="hljs-string">'undefined'</span> ? obj.scriptvi : <span class="hljs-keyword">this</span>.scriptvi;
   <span class="hljs-keyword">this</span>.script = obj.script || <span class="hljs-keyword">this</span>.script;
@@ -53,7 +57,7 @@ Txin.prototype.setScript = <span class="hljs-function"><span class="hljs-keyword
 
 Txin.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(json)</span> {</span>
   <span class="hljs-keyword">this</span>.set({
-    txidbuf: <span class="hljs-keyword">new</span> Buffer(json.txidbuf, <span class="hljs-string">'hex'</span>),
+    txhashbuf: <span class="hljs-keyword">new</span> Buffer(json.txhashbuf, <span class="hljs-string">'hex'</span>),
     txoutnum: json.txoutnum,
     scriptvi: Varint().fromJSON(json.scriptvi),
     script: Script().fromJSON(json.script),
@@ -64,7 +68,7 @@ Txin.prototype.fromJSON = <span class="hljs-function"><span class="hljs-keyword"
 
 Txin.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">return</span> {
-    txidbuf: <span class="hljs-keyword">this</span>.txidbuf.toString(<span class="hljs-string">'hex'</span>),
+    txhashbuf: <span class="hljs-keyword">this</span>.txhashbuf.toString(<span class="hljs-string">'hex'</span>),
     txoutnum: <span class="hljs-keyword">this</span>.txoutnum,
     scriptvi: <span class="hljs-keyword">this</span>.scriptvi.toJSON(),
     script: <span class="hljs-keyword">this</span>.script.toJSON(),
@@ -73,11 +77,11 @@ Txin.prototype.toJSON = <span class="hljs-function"><span class="hljs-keyword">f
 };
 
 Txin.prototype.fromBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufferReader(BufferReader(buf));
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBufR(BufR(buf));
 };
 
-Txin.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
-  <span class="hljs-keyword">this</span>.txidbuf = br.read(<span class="hljs-number">32</span>);
+Txin.prototype.fromBufR = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(br)</span> {</span>
+  <span class="hljs-keyword">this</span>.txhashbuf = br.read(<span class="hljs-number">32</span>);
   <span class="hljs-keyword">this</span>.txoutnum = br.readUInt32LE();
   <span class="hljs-keyword">this</span>.scriptvi = Varint(br.readVarintBuf());
   <span class="hljs-keyword">this</span>.script = Script().fromBuffer(br.read(<span class="hljs-keyword">this</span>.scriptvi.toNumber()));
@@ -86,18 +90,29 @@ Txin.prototype.fromBufferReader = <span class="hljs-function"><span class="hljs-
 };
 
 Txin.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufferWriter().concat();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.toBufW().concat();
 };
 
-Txin.prototype.toBufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
+Txin.prototype.toBufW = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bw)</span> {</span>
   <span class="hljs-keyword">if</span> (!bw)
-    bw = <span class="hljs-keyword">new</span> BufferWriter();
-  bw.write(<span class="hljs-keyword">this</span>.txidbuf);
+    bw = <span class="hljs-keyword">new</span> BufW();
+  bw.write(<span class="hljs-keyword">this</span>.txhashbuf);
   bw.writeUInt32LE(<span class="hljs-keyword">this</span>.txoutnum);
   bw.write(<span class="hljs-keyword">this</span>.scriptvi.buf);
   bw.write(<span class="hljs-keyword">this</span>.script.toBuffer());
   bw.writeUInt32LE(<span class="hljs-keyword">this</span>.seqnum);
   <span class="hljs-keyword">return</span> bw;
+};
+
+Txin.prototype.hasNullInput = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hex = <span class="hljs-keyword">this</span>.txhashbuf.toString(<span class="hljs-string">'hex'</span>);
+  <span class="hljs-keyword">if</span> (hex === <span class="hljs-string">'0000000000000000000000000000000000000000000000000000000000000000'</span> &amp;&amp; <span class="hljs-keyword">this</span>.txoutnum === <span class="hljs-number">0xffffffff</span>)
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Analagous to bitcoind&#39;s SetNull in COutPoint</p></div></div><div class="code"><div class="wrapper">Txin.prototype.setNullInput = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">this</span>.txhashbuf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">32</span>);
+  <span class="hljs-keyword">this</span>.txhashbuf.fill(<span class="hljs-number">0</span>);
+  <span class="hljs-keyword">this</span>.txoutnum = <span class="hljs-number">0xffffffff</span>; <span class="hljs-comment">// -1 cast to unsigned int</span>
 };
 
 module.exports = Txin;</div></div></div></div></body></html>

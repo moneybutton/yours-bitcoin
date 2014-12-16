@@ -1,33 +1,36 @@
-<!DOCTYPE html><html lang="en"><head><title>bufferwriter</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bufferwriter"><meta name="groc-project-path" content="lib/bufferwriter.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bufferwriter.js">lib/bufferwriter.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<!DOCTYPE html><html lang="en"><head><title>bufw</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bufw"><meta name="groc-project-path" content="lib/bufw.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bufw.js">lib/bufw.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="buffer-writer">Buffer Writer</h1>
+<p>This is the writing complement of the BufR. You can easily write
+Varints and other basic number types. The way to use it is: buf =
+BufW().write(buf1).write(buf2).concat()</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 
-<span class="hljs-keyword">var</span> BufferWriter = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BufferWriter</span><span class="hljs-params">(obj)</span> {</span>
-  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BufferWriter))
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BufferWriter(obj);
+<span class="hljs-keyword">var</span> BufW = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BufW</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BufW))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BufW(obj);
   <span class="hljs-keyword">if</span> (obj)
     <span class="hljs-keyword">this</span>.set(obj);
   <span class="hljs-keyword">else</span>
     <span class="hljs-keyword">this</span>.bufs = [];
 };
 
-BufferWriter.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+BufW.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.bufs = obj.bufs || <span class="hljs-keyword">this</span>.bufs || [];
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufW.prototype.toBuffer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.concat();
 };
 
-BufferWriter.prototype.concat = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufW.prototype.concat = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">return</span> Buffer.concat(<span class="hljs-keyword">this</span>.bufs);
 };
 
-BufferWriter.prototype.write = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+BufW.prototype.write = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">this</span>.bufs.push(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeReverse = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
+BufW.prototype.writeReverse = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(buf)</span> {</span>
   <span class="hljs-keyword">var</span> buf2 = <span class="hljs-keyword">new</span> Buffer(buf.length);
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; buf2.length; i++)
     buf2[i] = buf[buf.length - <span class="hljs-number">1</span> - i];
@@ -35,101 +38,101 @@ BufferWriter.prototype.writeReverse = <span class="hljs-function"><span class="h
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeUInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
   buf.writeUInt8(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
   buf.writeInt8(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeUInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
   buf.writeUInt16BE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
   buf.writeInt16BE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeUInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
   buf.writeUInt16LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">2</span>);
   buf.writeInt16LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeUInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
   buf.writeUInt32BE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
   buf.writeInt32BE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeUInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
   buf.writeUInt32LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.prototype.writeInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">4</span>);
   buf.writeInt32LE(n, <span class="hljs-number">0</span>);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt64BEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
+BufW.prototype.writeUInt64BEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
   <span class="hljs-keyword">var</span> buf = bn.toBuffer({size: <span class="hljs-number">8</span>});
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeUInt64LEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
+BufW.prototype.writeUInt64LEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
   <span class="hljs-keyword">var</span> buf = bn.toBuffer({size: <span class="hljs-number">8</span>});
   <span class="hljs-keyword">this</span>.writeReverse(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeVarintNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
-  <span class="hljs-keyword">var</span> buf = BufferWriter.varintBufNum(n);
+BufW.prototype.writeVarintNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = BufW.varintBufNum(n);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.prototype.writeVarintBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
-  <span class="hljs-keyword">var</span> buf = BufferWriter.varintBufBN(bn);
+BufW.prototype.writeVarintBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
+  <span class="hljs-keyword">var</span> buf = BufW.varintBufBN(bn);
   <span class="hljs-keyword">this</span>.write(buf);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferWriter.varintBufNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
+BufW.varintBufNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(n)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-literal">undefined</span>;
   <span class="hljs-keyword">if</span> (n &lt; <span class="hljs-number">253</span>) {
     buf = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-number">1</span>);
@@ -151,7 +154,7 @@ BufferWriter.varintBufNum = <span class="hljs-function"><span class="hljs-keywor
   <span class="hljs-keyword">return</span> buf;
 };
 
-BufferWriter.varintBufBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
+BufW.varintBufBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(bn)</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-literal">undefined</span>;
   <span class="hljs-keyword">var</span> n = bn.toNumber();
   <span class="hljs-keyword">if</span> (n &lt; <span class="hljs-number">253</span>) {
@@ -166,7 +169,7 @@ BufferWriter.varintBufBN = <span class="hljs-function"><span class="hljs-keyword
     buf.writeUInt8(<span class="hljs-number">254</span>, <span class="hljs-number">0</span>);
     buf.writeUInt32LE(n, <span class="hljs-number">1</span>);
   } <span class="hljs-keyword">else</span> {
-    <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufferWriter();
+    <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
     bw.writeUInt8(<span class="hljs-number">255</span>);
     bw.writeUInt64LEBN(bn);
     <span class="hljs-keyword">var</span> buf = bw.concat();
@@ -174,4 +177,4 @@ BufferWriter.varintBufBN = <span class="hljs-function"><span class="hljs-keyword
   <span class="hljs-keyword">return</span> buf;
 };
 
-module.exports = BufferWriter;</div></div></div></div></body></html>
+module.exports = BufW;</div></div></div></div></body></html>

@@ -39,24 +39,16 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
               "type": "heading",
               "data": {
                 "level": 2,
-                "title": "Testing",
-                "slug": "testing"
-              },
-              "depth": 2
-            }, {
-              "type": "heading",
-              "data": {
-                "level": 2,
-                "title": "Coverage",
-                "slug": "coverage"
-              },
-              "depth": 2
-            }, {
-              "type": "heading",
-              "data": {
-                "level": 2,
                 "title": "Browser bundle",
                 "slug": "browser-bundle"
+              },
+              "depth": 2
+            }, {
+              "type": "heading",
+              "data": {
+                "level": 2,
+                "title": "Testing and Coverage",
+                "slug": "testing-and-coverage"
               },
               "depth": 2
             }
@@ -78,24 +70,16 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "type": "heading",
           "data": {
             "level": 2,
-            "title": "Testing",
-            "slug": "testing"
-          },
-          "depth": 2
-        }, {
-          "type": "heading",
-          "data": {
-            "level": 2,
-            "title": "Coverage",
-            "slug": "coverage"
-          },
-          "depth": 2
-        }, {
-          "type": "heading",
-          "data": {
-            "level": 2,
             "title": "Browser bundle",
             "slug": "browser-bundle"
+          },
+          "depth": 2
+        }, {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "title": "Testing and Coverage",
+            "slug": "testing-and-coverage"
           },
           "depth": 2
         }
@@ -116,7 +100,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/address.js",
         "targetPath": "address",
         "pageTitle": "address",
-        "title": "address"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Bitcoin Address",
+            "slug": "bitcoin-address",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Bitcoin Address"
       },
       "depth": 1,
       "outline": []
@@ -136,7 +130,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/base58.js",
         "targetPath": "base58",
         "pageTitle": "base58",
-        "title": "base58"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Base58 Encoding",
+            "slug": "base58-encoding",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Base58 Encoding"
       },
       "depth": 1,
       "outline": []
@@ -156,7 +160,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/base58check.js",
         "targetPath": "base58check",
         "pageTitle": "base58check",
-        "title": "base58check"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Base58 Check Encoding",
+            "slug": "base58-check-encoding",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Base58 Check Encoding"
       },
       "depth": 1,
       "outline": []
@@ -176,7 +190,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/bip32.js",
         "targetPath": "bip32",
         "pageTitle": "bip32",
-        "title": "bip32"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "BIP32: HD Wallets",
+            "slug": "bip32-hd-wallets",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "BIP32: HD Wallets"
       },
       "depth": 1,
       "outline": []
@@ -196,7 +220,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/bip39.js",
         "targetPath": "bip39",
         "pageTitle": "bip39",
-        "title": "bip39"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "BIP39: Mnemonic Seeds",
+            "slug": "bip39-mnemonic-seeds",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "BIP39: Mnemonic Seeds"
       },
       "depth": 1,
       "outline": []
@@ -216,7 +250,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/block.js",
         "targetPath": "block",
         "pageTitle": "block",
-        "title": "block"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Block",
+            "slug": "block",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Block"
       },
       "depth": 1,
       "outline": []
@@ -236,7 +280,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/blockheader.js",
         "targetPath": "blockheader",
         "pageTitle": "blockheader",
-        "title": "blockheader"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Block Header",
+            "slug": "block-header",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Block Header"
       },
       "depth": 1,
       "outline": []
@@ -256,7 +310,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/bn.js",
         "targetPath": "bn",
         "pageTitle": "bn",
-        "title": "bn"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Big Number",
+            "slug": "big-number",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Big Number"
       },
       "depth": 1,
       "outline": []
@@ -272,11 +336,21 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "foldPrefix": "^",
           "name": "JavaScript"
         },
-        "sourcePath": "/home/ryan/dev/fullnode/lib/bufferreader.js",
-        "projectPath": "lib/bufferreader.js",
-        "targetPath": "bufferreader",
-        "pageTitle": "bufferreader",
-        "title": "bufferreader"
+        "sourcePath": "/home/ryan/dev/fullnode/lib/bufr.js",
+        "projectPath": "lib/bufr.js",
+        "targetPath": "bufr",
+        "pageTitle": "bufr",
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Buffer Reader",
+            "slug": "buffer-reader",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Buffer Reader"
       },
       "depth": 1,
       "outline": []
@@ -292,11 +366,21 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "foldPrefix": "^",
           "name": "JavaScript"
         },
-        "sourcePath": "/home/ryan/dev/fullnode/lib/bufferwriter.js",
-        "projectPath": "lib/bufferwriter.js",
-        "targetPath": "bufferwriter",
-        "pageTitle": "bufferwriter",
-        "title": "bufferwriter"
+        "sourcePath": "/home/ryan/dev/fullnode/lib/bufw.js",
+        "projectPath": "lib/bufw.js",
+        "targetPath": "bufw",
+        "pageTitle": "bufw",
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Buffer Writer",
+            "slug": "buffer-writer",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Buffer Writer"
       },
       "depth": 1,
       "outline": []
@@ -316,7 +400,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/constants.js",
         "targetPath": "constants",
         "pageTitle": "constants",
-        "title": "constants"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Constants",
+            "slug": "constants",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Constants"
       },
       "depth": 1,
       "outline": []
@@ -336,7 +430,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/ecdsa.js",
         "targetPath": "ecdsa",
         "pageTitle": "ecdsa",
-        "title": "ecdsa"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "ECDSA",
+            "slug": "ecdsa",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "ECDSA"
       },
       "depth": 1,
       "outline": []
@@ -606,7 +710,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/hash.js",
         "targetPath": "hash",
         "pageTitle": "hash",
-        "title": "hash"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Hash",
+            "slug": "hash",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Hash"
       },
       "depth": 1,
       "outline": []
@@ -626,7 +740,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/interp.js",
         "targetPath": "interp",
         "pageTitle": "interp",
-        "title": "interp"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Script Interpreter",
+            "slug": "script-interpreter",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Script Interpreter"
       },
       "depth": 1,
       "outline": []
@@ -646,7 +770,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/kdf.js",
         "targetPath": "kdf",
         "pageTitle": "kdf",
-        "title": "kdf"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "KDF",
+            "slug": "kdf",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "KDF"
       },
       "depth": 1,
       "outline": []
@@ -666,7 +800,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/keypair.js",
         "targetPath": "keypair",
         "pageTitle": "keypair",
-        "title": "keypair"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Keypair",
+            "slug": "keypair",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Keypair"
       },
       "depth": 1,
       "outline": []
@@ -686,7 +830,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/message.js",
         "targetPath": "message",
         "pageTitle": "message",
-        "title": "message"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Signed Message",
+            "slug": "signed-message",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Signed Message"
       },
       "depth": 1,
       "outline": []
@@ -706,7 +860,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/opcode.js",
         "targetPath": "opcode",
         "pageTitle": "opcode",
-        "title": "opcode"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Opcode",
+            "slug": "opcode",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Opcode"
       },
       "depth": 1,
       "outline": []
@@ -726,7 +890,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/point.js",
         "targetPath": "point",
         "pageTitle": "point",
-        "title": "point"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Point (on secp256k1)",
+            "slug": "point-on-secp256k1",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Point (on secp256k1)"
       },
       "depth": 1,
       "outline": []
@@ -746,7 +920,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/privkey.js",
         "targetPath": "privkey",
         "pageTitle": "privkey",
-        "title": "privkey"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Private Key",
+            "slug": "private-key",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Private Key"
       },
       "depth": 1,
       "outline": []
@@ -766,7 +950,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/pubkey.js",
         "targetPath": "pubkey",
         "pageTitle": "pubkey",
-        "title": "pubkey"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Public Key",
+            "slug": "public-key",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Public Key"
       },
       "depth": 1,
       "outline": []
@@ -786,7 +980,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/random.js",
         "targetPath": "random",
         "pageTitle": "random",
-        "title": "random"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Random Number Generator",
+            "slug": "random-number-generator",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Random Number Generator"
       },
       "depth": 1,
       "outline": []
@@ -806,7 +1010,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/script.js",
         "targetPath": "script",
         "pageTitle": "script",
-        "title": "script"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Script",
+            "slug": "script",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Script"
       },
       "depth": 1,
       "outline": []
@@ -822,11 +1036,21 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "foldPrefix": "^",
           "name": "JavaScript"
         },
-        "sourcePath": "/home/ryan/dev/fullnode/lib/signature.js",
-        "projectPath": "lib/signature.js",
-        "targetPath": "signature",
-        "pageTitle": "signature",
-        "title": "signature"
+        "sourcePath": "/home/ryan/dev/fullnode/lib/sig.js",
+        "projectPath": "lib/sig.js",
+        "targetPath": "sig",
+        "pageTitle": "sig",
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Signature",
+            "slug": "signature",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Signature"
       },
       "depth": 1,
       "outline": []
@@ -846,7 +1070,47 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/tx.js",
         "targetPath": "tx",
         "pageTitle": "tx",
-        "title": "tx"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Transaction",
+            "slug": "transaction",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Transaction"
+      },
+      "depth": 1,
+      "outline": []
+    }, {
+      "type": "file",
+      "data": {
+        "language": {
+          "nameMatchers": [".js"],
+          "pygmentsLexer": "javascript",
+          "multiLineComment": ["/*", "*", "*/"],
+          "singleLineComment": ["//"],
+          "ignorePrefix": "}",
+          "foldPrefix": "^",
+          "name": "JavaScript"
+        },
+        "sourcePath": "/home/ryan/dev/fullnode/lib/txbuilder.js",
+        "projectPath": "lib/txbuilder.js",
+        "targetPath": "txbuilder",
+        "pageTitle": "txbuilder",
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Transaction Builder",
+            "slug": "transaction-builder",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Transaction Builder"
       },
       "depth": 1,
       "outline": []
@@ -866,7 +1130,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/txin.js",
         "targetPath": "txin",
         "pageTitle": "txin",
-        "title": "txin"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Transaction Input",
+            "slug": "transaction-input",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Transaction Input"
       },
       "depth": 1,
       "outline": []
@@ -886,7 +1160,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/txout.js",
         "targetPath": "txout",
         "pageTitle": "txout",
-        "title": "txout"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Transaction Output",
+            "slug": "transaction-output",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Transaction Output"
       },
       "depth": 1,
       "outline": []
@@ -906,7 +1190,17 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
         "projectPath": "lib/varint.js",
         "targetPath": "varint",
         "pageTitle": "varint",
-        "title": "varint"
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Varint (a.k.a. Compact Size)",
+            "slug": "varint-aka-compact-size",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Varint (a.k.a. Compact Size)"
       },
       "depth": 1,
       "outline": []

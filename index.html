@@ -20,6 +20,11 @@ bipxx.js in lib/ (since that is their standard name). Any non-standard features
 folder and are accessible at fullnode.expmt. Once they are standardized and
 given a BIP, they are renamed and placed in lib/.</p>
 </li>
+<li><p>Expose everything, including dependencies. This makes it possible to develop
+apps that require fine-grained control over the basics, such as big numbers and
+points. However, it also means that you can hurt yourself if you misuse these
+primitives.</p>
+</li>
 <li><p>It is always possible to create a new object without using &quot;new&quot;.</p>
 </li>
 <li><p>Compatible with browserify (i.e., using require(&#39;fullnode/lib/message&#39;)
@@ -39,21 +44,23 @@ of an instance method, you must access the object property(s) that it modifies.<
 <li>90%+ test coverage</li>
 <li>Browserifiable</li>
 <li>Stealth keys, addresses, message</li>
-<li>Proper message signing and verification</li>
-<li>Proper handling of reading and writing big varInts</li>
+<li>Bitcoin-style message signing and verification</li>
 <li>Exposed big number and point classes</li>
-<li>Deterministic signatures</li>
+<li>Deterministic k (deterministic signatures; RFC 6979)</li>
+<li>Script interpreter, validated against bitcoind tests</li>
 </ul>
 <h2 id="documentation">Documentation</h2>
 <pre><code>npm install -g groc
 groc</code></pre>
-<h2 id="testing">Testing</h2>
-<pre><code>npm install -g mocha
-npm test</code></pre>
-<h2 id="coverage">Coverage</h2>
-<pre><code>npm install -g istanbul
-istanbul cover _mocha -- --recursive</code></pre>
 <h2 id="browser-bundle">Browser bundle</h2>
 <pre><code>npm install -g browserify
 npm install -g uglifyify
-browser/build</code></pre></div></div></div></div></body></html>
+browser/build</code></pre>
+<h2 id="testing-and-coverage">Testing and Coverage</h2>
+<pre><code>npm install -g mocha
+npm install -g istanbul
+npm test</code></pre>
+<p>You can see the coverage report at coverage/lcov-report/index.html.</p>
+<p>Or, to build tests for the browser:</p>
+<pre><code>browser/build</code></pre>
+<p>Then open test/index.html in your browser.</p></div></div></div></div></body></html>

@@ -1,8 +1,14 @@
-<!DOCTYPE html><html lang="en"><head><title>bufferreader</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bufferreader"><meta name="groc-project-path" content="lib/bufferreader.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bufferreader.js">lib/bufferreader.js</a></div></div><div id="document"><div class="segment"><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+<!DOCTYPE html><html lang="en"><head><title>bufr</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bufr"><meta name="groc-project-path" content="lib/bufr.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bufr.js">lib/bufr.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="buffer-reader">Buffer Reader</h1>
+<p>This is a convenience class for reading Varints and other basic types from a
+buffer. This class is most useful for reading Varints, and also for signed
+or unsigned integers of various types. It can also read a buffer in reverse
+order, which is useful in bitcoin which uses little endian numbers a lot so
+you find that you must reverse things. You probably want to use it like:
+varint = BufR(buf).readVarint()</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 
-<span class="hljs-keyword">var</span> BufferReader = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BufferReader</span><span class="hljs-params">(buf)</span> {</span>
-  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BufferReader))
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BufferReader(buf);
+<span class="hljs-keyword">var</span> BufR = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BufR</span><span class="hljs-params">(buf)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BufR))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BufR(buf);
   <span class="hljs-keyword">if</span> (Buffer.isBuffer(buf)) {
     <span class="hljs-keyword">this</span>.set({buf: buf});
   }
@@ -12,17 +18,17 @@
   }
 };
 
-BufferReader.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+BufR.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.buf = obj.buf || <span class="hljs-keyword">this</span>.buf || <span class="hljs-literal">undefined</span>;
   <span class="hljs-keyword">this</span>.pos = obj.pos || <span class="hljs-keyword">this</span>.pos || <span class="hljs-number">0</span>;
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-BufferReader.prototype.eof = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.eof = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.pos &gt;= <span class="hljs-keyword">this</span>.buf.length;
 };
 
-BufferReader.prototype.read = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(len)</span> {</span>
+BufR.prototype.read = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(len)</span> {</span>
   <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> len === <span class="hljs-string">'undefined'</span>)
     <span class="hljs-keyword">var</span> len = <span class="hljs-keyword">this</span>.buf.length;
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.buf.slice(<span class="hljs-keyword">this</span>.pos, <span class="hljs-keyword">this</span>.pos + len);
@@ -30,7 +36,7 @@ BufferReader.prototype.read = <span class="hljs-function"><span class="hljs-keyw
   <span class="hljs-keyword">return</span> buf;
 };
 
-BufferReader.prototype.readReverse = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(len)</span> {</span>
+BufR.prototype.readReverse = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(len)</span> {</span>
   <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> len === <span class="hljs-string">'undefined'</span>)
     <span class="hljs-keyword">var</span> len = <span class="hljs-keyword">this</span>.buf.length;
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.buf.slice(<span class="hljs-keyword">this</span>.pos, <span class="hljs-keyword">this</span>.pos + len);
@@ -41,80 +47,80 @@ BufferReader.prototype.readReverse = <span class="hljs-function"><span class="hl
   <span class="hljs-keyword">return</span> buf2;
 };
 
-BufferReader.prototype.readUInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readUInt8(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">1</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readInt8 = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readInt8(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">1</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readUInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readUInt16BE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">2</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readInt16BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readInt16BE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">2</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readUInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readUInt16LE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">2</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readInt16LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readInt16LE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">2</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readUInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readUInt32BE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">4</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readInt32BE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readInt32BE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">4</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readUInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readUInt32LE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">4</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readInt32LE = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> val = <span class="hljs-keyword">this</span>.buf.readInt32LE(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">4</span>;
   <span class="hljs-keyword">return</span> val;
 };
 
-BufferReader.prototype.readUInt64BEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt64BEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.buf.slice(<span class="hljs-keyword">this</span>.pos, <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">8</span>);
   <span class="hljs-keyword">var</span> bn = BN().fromBuffer(buf);
   <span class="hljs-keyword">this</span>.pos = <span class="hljs-keyword">this</span>.pos + <span class="hljs-number">8</span>;
   <span class="hljs-keyword">return</span> bn;
 };
 
-BufferReader.prototype.readUInt64LEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readUInt64LEBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> buf = <span class="hljs-keyword">this</span>.readReverse(<span class="hljs-number">8</span>);
   <span class="hljs-keyword">var</span> bn = BN().fromBuffer(buf);
   <span class="hljs-keyword">return</span> bn;
 };
 
-BufferReader.prototype.readVarintNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readVarintNum = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> first = <span class="hljs-keyword">this</span>.readUInt8();
   <span class="hljs-keyword">switch</span> (first) {
     <span class="hljs-keyword">case</span> <span class="hljs-number">0xFD</span>:
@@ -133,7 +139,7 @@ BufferReader.prototype.readVarintNum = <span class="hljs-function"><span class="
   }
 };
 
-BufferReader.prototype.readVarintBuf = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readVarintBuf = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> first = <span class="hljs-keyword">this</span>.buf.readUInt8(<span class="hljs-keyword">this</span>.pos);
   <span class="hljs-keyword">switch</span> (first) {
     <span class="hljs-keyword">case</span> <span class="hljs-number">0xFD</span>:
@@ -147,7 +153,7 @@ BufferReader.prototype.readVarintBuf = <span class="hljs-function"><span class="
   }
 };
 
-BufferReader.prototype.readVarintBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+BufR.prototype.readVarintBN = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> first = <span class="hljs-keyword">this</span>.readUInt8();
   <span class="hljs-keyword">switch</span> (first) {
     <span class="hljs-keyword">case</span> <span class="hljs-number">0xFD</span>:
@@ -161,4 +167,4 @@ BufferReader.prototype.readVarintBN = <span class="hljs-function"><span class="h
   }
 };
 
-module.exports = BufferReader;</div></div></div></div></body></html>
+module.exports = BufR;</div></div></div></div></body></html>
