@@ -10,7 +10,8 @@ key from a signature. The &quot;compressed&quot; value is also necessary to accu
 compute the public key from a signature.</p>
 <p>There are a few different formats of a signature in bitcoin. One is DER, the
 other is the TxFormat which is the same as DER but with the nhashtype byte
-appended, and the final one is Compact, which is used by Message.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
+appended, and the final one is Compact, which is used by Bitcoin Signed
+Message (BSM).</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 <span class="hljs-keyword">var</span> Point = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./point'</span>);
 <span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
 

@@ -4,7 +4,9 @@ building pubkeyhash and p2sh transactions, and also for verifying arbitrary
 transactions (and their inputs). You can (or will be able to) pay to
 pubkeyhash to p2sh and can spend pubkeyhash or p2sh-pubkeyhash or
 p2sh-multisig.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> Tx = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./tx'</span>);
+<span class="hljs-keyword">var</span> Txout = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./txout'</span>);
 <span class="hljs-keyword">var</span> Address = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./address'</span>);
+<span class="hljs-keyword">var</span> Script = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./script'</span>);
 <span class="hljs-keyword">var</span> BN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bn'</span>);
 <span class="hljs-keyword">var</span> Block = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./block'</span>);
 <span class="hljs-keyword">var</span> BufR = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./bufr'</span>);
@@ -25,13 +27,28 @@ module.exports = Txbuilder;
 
 Txbuilder.prototype.initialize = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">this</span>.tx = Tx();
-  <span class="hljs-keyword">this</span>.txoutsmap = {};
+  <span class="hljs-keyword">this</span>.prevtxoutsmap = {};
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
 Txbuilder.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.tx = obj.tx || <span class="hljs-keyword">this</span>.tx;
-  <span class="hljs-keyword">this</span>.txoutsmap = obj.txoutsmap || <span class="hljs-keyword">this</span>.txoutsmap;
+  <span class="hljs-keyword">this</span>.prevtxoutsmap = obj.prevtxoutsmap || <span class="hljs-keyword">this</span>.prevtxoutsmap;
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};
+
+Txbuilder.prototype.addToAddress = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(valuebn, addr)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(addr <span class="hljs-keyword">instanceof</span> Address) || !(valuebn <span class="hljs-keyword">instanceof</span> BN))
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'addr must be an Address, and valuebn must be a BN'</span>);
+  <span class="hljs-keyword">if</span> (addr.type() === <span class="hljs-string">'scripthash'</span>) {
+    <span class="hljs-keyword">var</span> script = Script().fromScripthash(addr.hashbuf);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (addr.type() === <span class="hljs-string">'pubkeyhash'</span>) {
+    <span class="hljs-keyword">var</span> script = Script().fromPubkeyhash(addr.hashbuf);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'invalid address type'</span>);
+  }
+  <span class="hljs-keyword">var</span> txout = Txout(valuebn, script);
+  <span class="hljs-keyword">this</span>.tx.addTxout(txout);
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Verifies that the transaction is valid both by performing basic checks, such
 as ensuring that no two inputs are the same, as well as by verifying every
@@ -94,7 +111,7 @@ the input is valid, false otherwise.</p></div></div><div class="code"><div class
   <span class="hljs-keyword">var</span> txidbuf = BufR(txin.txhashbuf).readReverse();
   <span class="hljs-keyword">var</span> txidhex = txidbuf.toString(<span class="hljs-string">'hex'</span>);
   <span class="hljs-keyword">var</span> mapid = txidhex + <span class="hljs-string">":"</span> + txoutnum;
-  <span class="hljs-keyword">var</span> scriptPubkey = <span class="hljs-keyword">this</span>.txoutsmap[mapid].script;
+  <span class="hljs-keyword">var</span> scriptPubkey = <span class="hljs-keyword">this</span>.prevtxoutsmap[mapid].script;
   <span class="hljs-keyword">var</span> interp = Interp()
   <span class="hljs-keyword">var</span> verified = interp.verify(scriptSig, scriptPubkey, <span class="hljs-keyword">this</span>.tx, nin, flags);
   <span class="hljs-keyword">return</span> verified;

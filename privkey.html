@@ -59,9 +59,7 @@ Privkey.prototype.validate = <span class="hljs-function"><span class="hljs-keywo
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify the networkstr ("mainnet" or "testnet")'</span>);
   <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> <span class="hljs-keyword">this</span>.compressed !== <span class="hljs-string">'boolean'</span>)
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Must specify whether the corresponding public key is compressed or not (true or false)'</span>);
-};
-
-Privkey.prototype.toWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Output the private key a Wallet Import Format (WIF) string.</p></div></div><div class="code"><div class="wrapper">Privkey.prototype.toWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> networkstr = <span class="hljs-keyword">this</span>.networkstr;
   <span class="hljs-keyword">var</span> compressed = <span class="hljs-keyword">this</span>.compressed;
 
@@ -78,9 +76,7 @@ Privkey.prototype.toWIF = <span class="hljs-function"><span class="hljs-keyword"
     buf = Buffer.concat([<span class="hljs-keyword">new</span> Buffer([constants[networkstr].privkey]), <span class="hljs-keyword">this</span>.bn.toBuffer({size: <span class="hljs-number">32</span>})]);
 
   <span class="hljs-keyword">return</span> base58check.encode(buf);
-};
-
-Privkey.prototype.fromWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Input the private key from a Wallet Import Format (WIF) string.</p></div></div><div class="code"><div class="wrapper">Privkey.prototype.fromWIF = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
   <span class="hljs-keyword">var</span> buf = base58check.decode(str);
 
   <span class="hljs-keyword">if</span> (buf.length === <span class="hljs-number">1</span> + <span class="hljs-number">32</span> + <span class="hljs-number">1</span> &amp;&amp; buf[<span class="hljs-number">1</span> + <span class="hljs-number">32</span> + <span class="hljs-number">1</span> - <span class="hljs-number">1</span>] == <span class="hljs-number">1</span>)

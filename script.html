@@ -191,10 +191,7 @@ Script.prototype.toString = <span class="hljs-function"><span class="hljs-keywor
   }
 
   <span class="hljs-keyword">return</span> str.substr(<span class="hljs-number">1</span>);
-};
-
-<span class="hljs-comment">//the script string format used in bitcoind data tests</span>
-Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Input the script from the script string format used in bitcoind data tests</p></div></div><div class="code"><div class="wrapper">Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(str)</span> {</span>
   <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
   <span class="hljs-keyword">var</span> tokens = str.split(<span class="hljs-string">' '</span>);
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; tokens.length; i++) {
@@ -228,10 +225,7 @@ Script.prototype.fromBitcoindString = <span class="hljs-function"><span class="h
   }
   <span class="hljs-keyword">var</span> buf = bw.concat();
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.fromBuffer(buf);
-};
-
-<span class="hljs-comment">//the script string format used in bitcoind data tests</span>
-Script.prototype.toBitcoindString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Output the script to the script string format used in bitcoind data tests.</p></div></div><div class="code"><div class="wrapper">Script.prototype.toBitcoindString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
   <span class="hljs-keyword">var</span> str = <span class="hljs-string">""</span>;
   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-keyword">this</span>.chunks.length; i++) {
     <span class="hljs-keyword">var</span> chunk = <span class="hljs-keyword">this</span>.chunks[i];
@@ -247,6 +241,22 @@ Script.prototype.toBitcoindString = <span class="hljs-function"><span class="hlj
     }
   }
   <span class="hljs-keyword">return</span> str.substr(<span class="hljs-number">1</span>);
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Turn script into a standard pubkeyhash output script</p></div></div><div class="code"><div class="wrapper">Script.prototype.fromPubkeyhash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf)</span> {</span>
+  <span class="hljs-keyword">if</span> (hashbuf.length !== <span class="hljs-number">20</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'hashbuf must be a 20 byte buffer'</span>);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_DUP);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_HASH160);
+  <span class="hljs-keyword">this</span>.writeBuffer(hashbuf);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_EQUALVERIFY);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_CHECKSIG);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+};</div></div></div><div class="segment"><div class="comments "><div class="wrapper"><p>Turn script into a standard scripthash (p2sh) output script</p></div></div><div class="code"><div class="wrapper">Script.prototype.fromScripthash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(hashbuf)</span> {</span>
+  <span class="hljs-keyword">if</span> (hashbuf.length !== <span class="hljs-number">20</span>)
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'hashbuf must be a 20 byte buffer'</span>);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_HASH160);
+  <span class="hljs-keyword">this</span>.writeBuffer(hashbuf);
+  <span class="hljs-keyword">this</span>.writeOp(Opcode.OP_EQUAL);
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
 Script.prototype.removeCodeseparators = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>

@@ -1,11 +1,10 @@
-<!DOCTYPE html><html lang="en"><head><title>message</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="message"><meta name="groc-project-path" content="lib/message.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/message.js">lib/message.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="signed-message">Signed Message</h1>
-<p>&quot;Message&quot; just refers to a standard way of signing and verifying an
-arbitrary message. Confusingly, it has nothing to do with bitcoin&#39;s p2p
-protocol. The standard way to do this involves using a &quot;Bitcoin Signed
-Message:\n&quot; prefix, which this code does. You are probably interested in the
-static Message.sign( ... ) and Message.verify( ... ) functions, which deal
-with a base64 string representing the compressed format of a signature.
-That&#39;s just how the standard works.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> ECDSA = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./ecdsa'</span>);
+<!DOCTYPE html><html lang="en"><head><title>bsm</title></head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0"><meta name="groc-relative-root" content=""><meta name="groc-document-path" content="bsm"><meta name="groc-project-path" content="lib/bsm.js"><meta name="groc-github-url" content="https://github.com/ryanxcharles/fullnode"><link rel="stylesheet" type="text/css" media="all" href="assets/style.css"><script type="text/javascript" src="assets/behavior.js"></script><body><div id="meta"><div class="file-path"><a href="https://github.com/ryanxcharles/fullnode/blob/master/lib/bsm.js">lib/bsm.js</a></div></div><div id="document"><div class="segment"><div class="comments "><div class="wrapper"><h1 id="bitcoin-signed-message">Bitcoin Signed Message</h1>
+<p>&quot;Bitcoin Signed Message&quot; just refers to a standard way of signing and
+verifying an arbitrary message. The standard way to do this involves using a
+&quot;Bitcoin Signed Message:\n&quot; prefix, which this code does. You are probably
+interested in the static BSM.sign( ... ) and BSM.verify( ... ) functions,
+which deal with a base64 string representing the compressed format of a
+signature.</p></div></div><div class="code"><div class="wrapper"><span class="hljs-keyword">var</span> ECDSA = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./ecdsa'</span>);
 <span class="hljs-keyword">var</span> Keypair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./keypair'</span>);
 <span class="hljs-keyword">var</span> Privkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./privkey'</span>);
 <span class="hljs-keyword">var</span> Pubkey = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./pubkey'</span>);
@@ -14,14 +13,14 @@ That&#39;s just how the standard works.</p></div></div><div class="code"><div cl
 <span class="hljs-keyword">var</span> Address = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./address'</span>);
 <span class="hljs-keyword">var</span> Sig = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./sig'</span>);
 
-<span class="hljs-keyword">var</span> Message = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Message</span><span class="hljs-params">(obj)</span> {</span>
-  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Message))
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Message(obj);
+<span class="hljs-keyword">var</span> BSM = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">BSM</span><span class="hljs-params">(obj)</span> {</span>
+  <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> BSM))
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> BSM(obj);
   <span class="hljs-keyword">if</span> (obj)
     <span class="hljs-keyword">this</span>.set(obj);
 };
 
-Message.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
+BSM.prototype.set = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj)</span> {</span>
   <span class="hljs-keyword">this</span>.messagebuf = obj.messagebuf || <span class="hljs-keyword">this</span>.messagebuf;
   <span class="hljs-keyword">this</span>.keypair = obj.keypair || <span class="hljs-keyword">this</span>.keypair;
   <span class="hljs-keyword">this</span>.sig = obj.sig || <span class="hljs-keyword">this</span>.sig;
@@ -30,14 +29,14 @@ Message.prototype.set = <span class="hljs-function"><span class="hljs-keyword">f
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-Message.magicBytes = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'Bitcoin Signed Message:\n'</span>);
+BSM.magicBytes = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">'Bitcoin Signed Message:\n'</span>);
 
-Message.magicHash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf)</span> {</span>
+BSM.magicHash = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf)</span> {</span>
   <span class="hljs-keyword">if</span> (!Buffer.isBuffer(messagebuf))
     <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'messagebuf must be a buffer'</span>);
   <span class="hljs-keyword">var</span> bw = <span class="hljs-keyword">new</span> BufW();
-  bw.writeVarintNum(Message.magicBytes.length);
-  bw.write(Message.magicBytes);
+  bw.writeVarintNum(BSM.magicBytes.length);
+  bw.write(BSM.magicBytes);
   bw.writeVarintNum(messagebuf.length);
   bw.write(messagebuf);
   <span class="hljs-keyword">var</span> buf = bw.concat();
@@ -47,17 +46,17 @@ Message.magicHash = <span class="hljs-function"><span class="hljs-keyword">funct
   <span class="hljs-keyword">return</span> hashbuf;
 };
 
-Message.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, keypair)</span> {</span>
-  <span class="hljs-keyword">var</span> m = Message({messagebuf: messagebuf, keypair: keypair});
+BSM.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, keypair)</span> {</span>
+  <span class="hljs-keyword">var</span> m = BSM({messagebuf: messagebuf, keypair: keypair});
   m.sign();
   <span class="hljs-keyword">var</span> sigbuf = m.sig.toCompact();
   <span class="hljs-keyword">var</span> sigstr = sigbuf.toString(<span class="hljs-string">'base64'</span>);
   <span class="hljs-keyword">return</span> sigstr;
 };
 
-Message.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, sigstr, address)</span> {</span>
+BSM.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(messagebuf, sigstr, address)</span> {</span>
   <span class="hljs-keyword">var</span> sigbuf = <span class="hljs-keyword">new</span> Buffer(sigstr, <span class="hljs-string">'base64'</span>);
-  <span class="hljs-keyword">var</span> message = <span class="hljs-keyword">new</span> Message();
+  <span class="hljs-keyword">var</span> message = <span class="hljs-keyword">new</span> BSM();
   message.messagebuf = messagebuf;
   message.sig = Sig().fromCompact(sigbuf);
   message.address = address;
@@ -65,8 +64,8 @@ Message.verify = <span class="hljs-function"><span class="hljs-keyword">function
   <span class="hljs-keyword">return</span> message.verify().verified;
 };
 
-Message.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">var</span> hashbuf = Message.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
+BSM.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hashbuf = BSM.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
   <span class="hljs-keyword">var</span> ecdsa = ECDSA({hashbuf: hashbuf, keypair: <span class="hljs-keyword">this</span>.keypair});
   ecdsa.signRandomK();
   ecdsa.calci();
@@ -74,8 +73,8 @@ Message.prototype.sign = <span class="hljs-function"><span class="hljs-keyword">
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-Message.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
-  <span class="hljs-keyword">var</span> hashbuf = Message.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
+BSM.prototype.verify = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> {</span>
+  <span class="hljs-keyword">var</span> hashbuf = BSM.magicHash(<span class="hljs-keyword">this</span>.messagebuf);
 
   <span class="hljs-keyword">var</span> ecdsa = <span class="hljs-keyword">new</span> ECDSA();
   ecdsa.hashbuf = hashbuf;
@@ -98,4 +97,4 @@ Message.prototype.verify = <span class="hljs-function"><span class="hljs-keyword
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
 };
 
-module.exports = Message;</div></div></div></div></body></html>
+module.exports = BSM;</div></div></div></div></body></html>

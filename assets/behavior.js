@@ -31,6 +31,22 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
               "type": "heading",
               "data": {
                 "level": 2,
+                "title": "Alpha Caveat",
+                "slug": "alpha-caveat"
+              },
+              "depth": 2
+            }, {
+              "type": "heading",
+              "data": {
+                "level": 2,
+                "title": "Notable Features",
+                "slug": "notable-features"
+              },
+              "depth": 2
+            }, {
+              "type": "heading",
+              "data": {
+                "level": 2,
                 "title": "Documentation",
                 "slug": "documentation"
               },
@@ -59,6 +75,22 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
       "depth": 1,
       "outline": [
         {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "title": "Alpha Caveat",
+            "slug": "alpha-caveat"
+          },
+          "depth": 2
+        }, {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "title": "Notable Features",
+            "slug": "notable-features"
+          },
+          "depth": 2
+        }, {
           "type": "heading",
           "data": {
             "level": 2,
@@ -321,6 +353,36 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "depth": 1
         },
         "title": "Big Number"
+      },
+      "depth": 1,
+      "outline": []
+    }, {
+      "type": "file",
+      "data": {
+        "language": {
+          "nameMatchers": [".js"],
+          "pygmentsLexer": "javascript",
+          "multiLineComment": ["/*", "*", "*/"],
+          "singleLineComment": ["//"],
+          "ignorePrefix": "}",
+          "foldPrefix": "^",
+          "name": "JavaScript"
+        },
+        "sourcePath": "/home/ryan/dev/fullnode/lib/bsm.js",
+        "projectPath": "lib/bsm.js",
+        "targetPath": "bsm",
+        "pageTitle": "bsm",
+        "firstHeader": {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "title": "Bitcoin Signed Message",
+            "slug": "bitcoin-signed-message",
+            "isFileHeader": true
+          },
+          "depth": 1
+        },
+        "title": "Bitcoin Signed Message"
       },
       "depth": 1,
       "outline": []
@@ -811,36 +873,6 @@ f.event={add:function(a,c,d,e,g){var h,i,j,k,l,m,n,o,p,q,r,s;if(!(a.nodeType===3
           "depth": 1
         },
         "title": "Keypair"
-      },
-      "depth": 1,
-      "outline": []
-    }, {
-      "type": "file",
-      "data": {
-        "language": {
-          "nameMatchers": [".js"],
-          "pygmentsLexer": "javascript",
-          "multiLineComment": ["/*", "*", "*/"],
-          "singleLineComment": ["//"],
-          "ignorePrefix": "}",
-          "foldPrefix": "^",
-          "name": "JavaScript"
-        },
-        "sourcePath": "/home/ryan/dev/fullnode/lib/message.js",
-        "projectPath": "lib/message.js",
-        "targetPath": "message",
-        "pageTitle": "message",
-        "firstHeader": {
-          "type": "heading",
-          "data": {
-            "level": 1,
-            "title": "Signed Message",
-            "slug": "signed-message",
-            "isFileHeader": true
-          },
-          "depth": 1
-        },
-        "title": "Signed Message"
       },
       "depth": 1,
       "outline": []
