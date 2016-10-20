@@ -290,6 +290,14 @@ describe('Bip32', function () {
     child2.toPublic().toString().should.equal(vector2m02147483647h12147483646h2Public)
   })
 
+  it('should derive correctly when private key has leading zeros', function () {
+    let key = 'xprv9s21ZrQH143K3ckY9DgU79uMTJkQRLdbCCVDh81SnxTgPzLLGax6uHeBULTtaEtcAvKjXfT7ZWtHzKjTpujMkUd9dDb8msDeAfnJxrgAYhr'
+    let bip32 = new Bip32().fromString(key)
+    should.equal(bip32.privKey.bn.toString(16, 32), '00000055378cf5fafb56c711c674143f9b0ee82ab0ba2924f19b64f5ae7cdbfd')
+    let child = bip32.derive("m/44'/0'/0'/0/0'")
+    should.equal(child.privKey.bn.toString(16, 32), '3348069561d2a0fb925e74bf198762acc47dce7db27372257d2d959a9e6f8aeb')
+  })
+
   describe('testnet', function () {
     it('should initialize a new Bip32 correctly from a random Bip32', function () {
       let b1 = new Bip32.Testnet()
